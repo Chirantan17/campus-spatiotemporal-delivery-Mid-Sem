@@ -2,14 +2,14 @@ erDiagram
     CAMPUS_ZONE {
         int zone_id PK
         string zone_name
-        geometry boundary "POLYGON(SRID 4326)"
+        geometry boundary "POLYGON (SRID 4326)"
     }
     
     DELIVERY_LOCATION {
         int location_id PK
         string name
         int zone_id FK
-        geometry point "POINT(SRID 4326)"
+        geometry point "POINT (SRID 4326)"
     }
     
     DRIVER {
@@ -29,11 +29,11 @@ erDiagram
     LOCATION_TRACE {
         bigint trace_id PK
         int driver_id FK
-        geometry location "POINT(SRID 4326)"
+        geometry location "POINT (SRID 4326)"
         timestamp recorded_at
     }
 
-    CAMPUS_ZONE ||--o{ DELIVERY_LOCATION : "encloses (1:N)"
-    DRIVER ||--o{ ORDER : "fulfills (1:N)"
-    DELIVERY_LOCATION ||--o{ ORDER : "receives (1:N)"
-    DRIVER ||--o{ LOCATION_TRACE : "emits telemetry (1:N)"
+    CAMPUS_ZONE ||--o{ DELIVERY_LOCATION : "encloses"
+    DRIVER ||--o{ ORDER : "assigned to"
+    DELIVERY_LOCATION ||--o{ ORDER : "receives"
+    DRIVER ||--o{ LOCATION_TRACE : "emits telemetry"

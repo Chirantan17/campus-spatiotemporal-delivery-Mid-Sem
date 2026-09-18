@@ -1,41 +1,56 @@
-# Campus Spatiotemporal Delivery Engine (Milestones M1–M3)
+# 🛰️ Campus Spatiotemporal Delivery Engine
+> **Course:** Advanced Database Systems (CS G516)  
+> **Evaluation Milestone:** Mid-Semester (Labs 1–3 Deliverables)
 
-An Advanced Database Systems (CS G516) project demonstrating physical spatiotemporal database design, geometric entity modeling, and spatial query mechanics using PostgreSQL and PostGIS.
-
----
-
-## 1. Project Overview
-
-This repository contains the mid-semester foundational implementation (M1–M3) for a campus last-mile delivery system. The primary goal is to establish a spatiotemporal database schema that separates relational transactional entities from high-frequency spatial telemetry, enabling spatial joins, proximity filtering, and spatial containment checks natively inside PostGIS.
-
-### Key Capabilities (M1–M3 Scope)
-* **Spatial Entity Modeling:** Storing spatial boundaries (`POLYGON`) and point entities (`POINT`) using WGS 84 (`EPSG:4326`) coordinate reference systems.
-* **Spatial Indexing:** Implementation of Generalized Search Tree (**GiST**) indexes on geographic columns.
-* **PostGIS Spatial Operator Workload:** Executing spatial containment (`ST_Contains`), range filtering (`ST_DWithin`), direct spherical distance measurement (`ST_Distance`), and K-Nearest Neighbor (`<->`) driver proximity sorting.
-* **Interactive Visualizer:** Streamlit + Folium map interface for inspecting polygon geofences and driver points.
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-336791?style=for-the-badge&logo=postgresql&logoColor=white)
+![PostGIS](https://img.shields.io/badge/PostGIS-3.3- green?style=for-the-badge&logo=postgis&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-24.0-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![Streamlit](https://img.shields.io/badge/Streamlit-1.28-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.10-3776AB?style=for-the-badge&logo=python&logoColor=white)
 
 ---
 
-## 2. Entity-Relationship (ER) Diagram
+## 📌 Executive Summary
+
+This repository contains the mid-semester spatiotemporal engine baseline for a campus last-mile delivery system. Built using **PostgreSQL/PostGIS**, the system addresses high-concurrency spatial data ingestion by decoupling static transactional state tables from append-only high-frequency telemetry streams. 
+
+The implementation covers physical schema generation, EPSG:4326 coordinate reference system (CRS) standardizations, spatial Generalized Search Tree (GiST) indexing, native PostGIS spatial operators, and an interactive GIS inspection interface.
+
+---
+
+## 📑 Lab-Wise Accomplishments Breakdown
+
+| Lab Milestone | Core Objectives | Technical Implementation & Deliverables |
+| :--- | :--- | :--- |
+| **Lab 1: Schema & Indexing** | Physical schema modeling, Spatial CRS configuration, Indexing strategies | • Containerized PostgreSQL 15 + PostGIS 3.3 engine via Docker.<br>• Mapped geometries using `EPSG:4326` (WGS 84).<br>• Constructed `GEOMETRY(POLYGON)` and `GEOMETRY(POINT)` entities.<br>• Applied Generalized Search Tree (**GiST**) spatial indexes across geometry columns. |
+| **Lab 2: Ingestion & Telemetry** | Spatial seeding, Boundary definition, Decoupled ingestion | • Seeded complex campus zone polygons via WKT (`ST_GeomFromText`).<br>• Linked delivery drop-offs (`delivery_location`) to zone foreign keys.<br>• Designed an **append-only time-series telemetry table** (`location_trace`) to eliminate row-locking during concurrent GPS pings. |
+| **Lab 3: Operators & UI** | PostGIS query execution, Spatial mechanics, Interactive visualization | • Evaluated zone spatial containment via `ST_Contains`.<br>• Performed 500m geodesic proximity checks using `ST_DWithin`.<br>• Implemented $O(\log N)$ nearest-driver matching via KNN (`<->` operator).<br>• Built a Streamlit + Folium map dashboard (`app.py`). |
+
+---
+
+## 🗄️ Database Architecture & Entity-Relationship Model
 
 ```mermaid
 erDiagram
     CAMPUS_ZONE {
         int zone_id PK
         string zone_name
-        geometry boundary "POLYGON"
+        geometry boundary "POLYGON (SRID 4326)"
     }
+    
     DELIVERY_LOCATION {
         int location_id PK
         string name
         int zone_id FK
-        geometry point "POINT"
+        geometry point "POINT (SRID 4326)"
     }
+    
     DRIVER {
         int driver_id PK
         string name
         string status
     }
+    
     ORDER {
         int order_id PK
         int driver_id FK
@@ -43,14 +58,15 @@ erDiagram
         string status
         timestamp created_at
     }
+    
     LOCATION_TRACE {
         bigint trace_id PK
         int driver_id FK
-        geometry location "POINT"
+        geometry location "POINT (SRID 4326)"
         timestamp recorded_at
     }
 
-    CAMPUS_ZONE ||--o{ DELIVERY_LOCATION : "contains"
-    DRIVER ||--o{ ORDER : "assigned to"
-    DELIVERY_LOCATION ||--o{ ORDER : "destination"
-    DRIVER ||--o{ LOCATION_TRACE : "emits telemetry"
+    CAMPUS_ZONE ||--o{ DELIVERY_LOCATION : "encloses (1:N)"
+    DRIVER ||--o{ ORDER : "fulfills (1:N)"
+    DELIVERY_LOCATION ||--o{ ORDER : "receives (1:N)"
+    DRIVER ||--o{ LOCATION_TRACE : "emits telemetry (1:N)"
