@@ -1,39 +1,76 @@
-erDiagram
-    CAMPUS_ZONE {
-        int zone_id PK
-        string zone_name
-        geometry boundary "POLYGON (SRID 4326)"
-    }
-    
-    DELIVERY_LOCATION {
-        int location_id PK
-        string name
-        int zone_id FK
-        geometry point "POINT (SRID 4326)"
-    }
-    
-    DRIVER {
-        int driver_id PK
-        string name
-        string status
-    }
-    
-    ORDER {
-        int order_id PK
-        int driver_id FK
-        int destination_id FK
-        string status
-        timestamp created_at
-    }
-    
-    LOCATION_TRACE {
-        bigint trace_id PK
-        int driver_id FK
-        geometry location "POINT (SRID 4326)"
-        timestamp recorded_at
-    }
+CAMPUS_ZONE {
+    int zone_id PK
+    string zone_name
+    geometry boundary "POLYGON (SRID 4326)"
+}
 
-    CAMPUS_ZONE ||--o{ DELIVERY_LOCATION : "encloses"
-    DRIVER ||--o{ ORDER : "assigned to"
-    DELIVERY_LOCATION ||--o{ ORDER : "receives"
-    DRIVER ||--o{ LOCATION_TRACE : "emits telemetry"
+RESTAURANT {
+    int restaurant_id PK
+    int zone_id FK
+    string name
+    geometry location "POINT (SRID 4326)"
+}
+
+MENU_ITEM {
+    int item_id PK
+    int restaurant_id FK
+    string name
+    numeric price
+    int prep_time_minutes
+}
+
+CUSTOMER {
+    int customer_id PK
+    string name
+    string phone
+}
+
+DELIVERY_LOCATION {
+    int location_id PK
+    int zone_id FK
+    string name
+    geometry point "POINT (SRID 4326)"
+}
+
+DRIVER {
+    int driver_id PK
+    string name
+    string status
+}
+
+ORDER {
+    int order_id PK
+    int customer_id FK
+    int restaurant_id FK
+    int driver_id FK
+    int destination_id FK
+    string status
+    timestamp created_at
+    timestamp fulfilled_at
+}
+
+ORDER_ITEM {
+    int order_item_id PK
+    int order_id FK
+    int item_id FK
+    int quantity
+    numeric price_at_order
+}
+
+LOCATION_TRACE {
+    bigint trace_id PK
+    int driver_id FK
+    geometry location "POINT (SRID 4326)"
+    timestamp recorded_at
+}
+
+CAMPUS_ZONE ||--|{ RESTAURANT : "encloses"
+CAMPUS_ZONE ||--|{ DELIVERY_LOCATION : "encloses"
+RESTAURANT ||--|{ MENU_ITEM : "offers"
+RESTAURANT ||--o{ ORDER : "prepares"
+CUSTOMER ||--o{ ORDER : "places"
+DELIVERY_LOCATION ||--o{ ORDER : "receives"
+DRIVER ||--o{ ORDER : "fulfills"
+ORDER ||--|{ ORDER_ITEM : "contains"
+MENU_ITEM ||--o{ ORDER_ITEM : "included_in"
+DRIVER ||--|{ LOCATION_TRACE : "emits telemetry"
