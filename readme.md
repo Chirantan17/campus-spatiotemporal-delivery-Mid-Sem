@@ -3,7 +3,7 @@
 > **Evaluation Milestone:** Mid-Semester (Labs 1–3 Deliverables)
 
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-336791?style=for-the-badge&logo=postgresql&logoColor=white)
-![PostGIS](https://img.shields.io/badge/PostGIS-3.3- green?style=for-the-badge&logo=postgis&logoColor=white)
+![PostGIS](https://img.shields.io/badge/PostGIS-3.3-22c55e?style=for-the-badge&logo=postgis&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-24.0-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 ![Streamlit](https://img.shields.io/badge/Streamlit-1.28-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.10-3776AB?style=for-the-badge&logo=python&logoColor=white)
@@ -11,6 +11,7 @@
 ---
 
 ## 📌 Executive Summary
+
 ![Dashboard Preview](dashboard_demo.png)
 
 This repository contains the mid-semester spatiotemporal engine baseline for a campus last-mile delivery system. Built using **PostgreSQL/PostGIS**, the system addresses high-concurrency spatial data ingestion by decoupling static transactional state tables from append-only high-frequency telemetry streams. 
