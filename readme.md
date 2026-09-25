@@ -11,6 +11,7 @@
 ---
 
 ## 📌 Executive Summary
+![Dashboard Preview](dashboard_demo.png)
 
 This repository contains the mid-semester spatiotemporal engine baseline for a campus last-mile delivery system. Built using **PostgreSQL/PostGIS**, the system addresses high-concurrency spatial data ingestion by decoupling static transactional state tables from append-only high-frequency telemetry streams. 
 
