@@ -1,76 +1,85 @@
-CAMPUS_ZONE {
-    int zone_id PK
-    string zone_name
-    geometry boundary "POLYGON (SRID 4326)"
-}
+erDiagram
+    %% ==========================================
+    %% CAMPUS FOOD DELIVERY SPATIO-TEMPORAL ERD
+    %% ==========================================
 
-RESTAURANT {
-    int restaurant_id PK
-    int zone_id FK
-    string name
-    geometry location "POINT (SRID 4326)"
-}
+    CUSTOMER ||--o{ "ORDER" : "places (1:N)"
+    RESTAURANT ||--o{ "ORDER" : "receives (1:N)"
+    DRIVER ||--o{ "ORDER" : "delivers (1:N)"
+    DELIVERY_LOCATION ||--o{ "ORDER" : "destination for (1:N)"
 
-MENU_ITEM {
-    int item_id PK
-    int restaurant_id FK
-    string name
-    numeric price
-    int prep_time_minutes
-}
+    "ORDER" ||--|{ ORDER_ITEM : "contains line items (1:N)"
+    MENU_ITEM ||--o{ ORDER_ITEM : "referenced in (1:N)"
+    RESTAURANT ||--|{ MENU_ITEM : "offers (1:N)"
 
-CUSTOMER {
-    int customer_id PK
-    string name
-    string phone
-}
+    CAMPUS_ZONE ||--o{ DELIVERY_LOCATION : "geofences (1:N)"
+    CAMPUS_ZONE ||--o{ RESTAURANT : "encloses (1:N)"
+    DRIVER ||--o{ LOCATION_TRACE : "streams GPS (1:N)"
 
-DELIVERY_LOCATION {
-    int location_id PK
-    int zone_id FK
-    string name
-    geometry point "POINT (SRID 4326)"
-}
+    CUSTOMER {
+        int customer_id PK
+        varchar name
+        varchar email
+        varchar phone
+    }
 
-DRIVER {
-    int driver_id PK
-    string name
-    string status
-}
+    CAMPUS_ZONE {
+        int zone_id PK
+        varchar zone_name
+        geometry boundary "Polygon, 4326"
+    }
 
-ORDER {
-    int order_id PK
-    int customer_id FK
-    int restaurant_id FK
-    int driver_id FK
-    int destination_id FK
-    string status
-    timestamp created_at
-    timestamp fulfilled_at
-}
+    RESTAURANT {
+        int restaurant_id PK
+        int zone_id FK
+        varchar name
+        varchar phone
+        geometry location "Point, 4326"
+    }
 
-ORDER_ITEM {
-    int order_item_id PK
-    int order_id FK
-    int item_id FK
-    int quantity
-    numeric price_at_order
-}
+    DELIVERY_LOCATION {
+        int location_id PK
+        int zone_id FK
+        varchar name
+        geometry point "Point, 4326"
+    }
 
-LOCATION_TRACE {
-    bigint trace_id PK
-    int driver_id FK
-    geometry location "POINT (SRID 4326)"
-    timestamp recorded_at
-}
+    DRIVER {
+        int driver_id PK
+        varchar name
+        varchar phone
+        varchar status "AVAILABLE | BUSY | OFFLINE"
+    }
 
-CAMPUS_ZONE ||--|{ RESTAURANT : "encloses"
-CAMPUS_ZONE ||--|{ DELIVERY_LOCATION : "encloses"
-RESTAURANT ||--|{ MENU_ITEM : "offers"
-RESTAURANT ||--o{ ORDER : "prepares"
-CUSTOMER ||--o{ ORDER : "places"
-DELIVERY_LOCATION ||--o{ ORDER : "receives"
-DRIVER ||--o{ ORDER : "fulfills"
-ORDER ||--|{ ORDER_ITEM : "contains"
-MENU_ITEM ||--o{ ORDER_ITEM : "included_in"
-DRIVER ||--|{ LOCATION_TRACE : "emits telemetry"
+    MENU_ITEM {
+        int item_id PK
+        int restaurant_id FK
+        varchar name
+        numeric price
+        int prep_time_mins
+    }
+
+    "ORDER" {
+        int order_id PK
+        int customer_id FK
+        int restaurant_id FK
+        int driver_id FK
+        int destination_id FK
+        varchar status "PENDING | PREPARING | IN_TRANSIT | DELIVERED"
+        timestamptz created_at
+        timestamptz fulfilled_at
+    }
+
+    ORDER_ITEM {
+        int order_id PK,FK
+        int item_id PK,FK
+        int quantity
+        numeric price_at_order
+    }
+
+    LOCATION_TRACE {
+        bigint trace_id PK
+        int driver_id FK
+        geometry location "Point, 4326"
+        timestamptz recorded_at
+    }
