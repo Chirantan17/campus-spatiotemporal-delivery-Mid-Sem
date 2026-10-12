@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campus Spatiotemporal Engine — DB Execution Inspector</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkbg: '#090d16',
+                        cardbg: '#111827',
+                        bordercolor: '#1f2937'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .table-container {
+            background-color: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+        .table-header-title {
+            background-color: #1e293b;
+            padding: 6px 12px;
+            font-weight: 700;
+            font-size: 13px;
+            color: #f8fafc;
+            letter-spacing: 0.05em;
+            border-b: 1px solid #334155;
+        }
+        th, td {
+            padding: 6px 10px;
+            text-align: left;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 11px;
+            white-space: nowrap;
+        }
+        th {
+            background-color: #020617;
+            color: #94a3b8;
+            font-weight: 600;
+            border-bottom: 1px solid #1e293b;
+        }
+        td {
+            border-bottom: 1px solid #0f172a;
+        }
+        /* WHITEBOARD COLOR SPECIFICATIONS */
+        .pk-text { color: #facc15 !important; font-weight: 600; } /* YELLOW for PK column & values */
+        .fk-header { color: #c084fc !important; font-weight: 600; } /* PURPLE for FK column headers ONLY */
+        
+        /* GREEN WRITE HIGHLIGHT ON STEP ADVANCE */
+        .new-row-highlight {
+            background-color: rgba(16, 185, 129, 0.25) !important;
+            border: 1px solid #10b981 !important;
+            color: #34d399 !important;
+            font-weight: 600;
+        }
+        .cell-update-highlight {
+            background-color: rgba(16, 185, 129, 0.35) !important;
+            color: #6ee7b7 !important;
+            font-weight: 700;
+            border-radius: 4px;
+        }
+
+        .fk-line {
+            stroke: #334155;
+            stroke-width: 2;
+            fill: none;
+            transition: all 0.4s ease;
+        }
+        .fk-line-active {
+            stroke: #38bdf8;
+            stroke-width: 3;
+            stroke-dasharray: 6;
+            animation: dash 1s linear infinite;
+        }
+        @keyframes dash {
+            to { stroke-dashoffset: -12; }
+        }
+    </style>
+</head>
+<body class="bg-darkbg text-slate-100 font-sans min-h-screen flex flex-col">
+
+    <!-- TOP CONTROL BAR -->
+    <header class="bg-cardbg border-b border-bordercolor px-6 py-3 flex justify-between items-center shadow-lg sticky top-0 z-50">
+        <div class="flex items-center space-x-3">
+            <div class="p-2 bg-sky-500/20 text-sky-400 rounded-lg border border-sky-500/30">
+                <i class="fa-solid fa-database text-lg"></i>
+            </div>
+            <div>
+                <h1 class="text-base font-bold text-white tracking-wide">Campus Spatiotemporal Delivery Engine</h1>
+                <p class="text-[11px] text-slate-400">CS G516 Advanced Database Systems — Relational Execution Flow</p>
+            </div>
+        </div>
+
+        <!-- TRANSACTION STEPPER CONTROLS -->
+        <div class="flex items-center space-x-3 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
+            <button id="btn-prev" onclick="changeStep(-1)" class="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-xs font-semibold rounded-lg border border-slate-700 transition flex items-center space-x-1.5 text-slate-200">
+                <i class="fa-solid fa-backward"></i>
+                <span>Step Back (Undo)</span>
+            </button>
+            
+            <div class="px-5 text-center min-w-[280px]">
+                <span class="text-[10px] text-slate-400 block uppercase tracking-wider font-semibold">Active Transaction Stage</span>
+                <span id="step-indicator" class="text-xs font-bold text-sky-400 font-mono">Step 0 / 5 — Baseline State</span>
+            </div>
+
+            <button id="btn-next" onclick="changeStep(1)" class="px-4 py-1.5 bg-sky-600 hover:bg-sky-500 text-xs font-semibold rounded-lg text-white shadow-md transition flex items-center space-x-1.5">
+                <span>Step Forward (Advance)</span>
+                <i class="fa-solid fa-forward"></i>
+            </button>
+
+            <button onclick="resetExecution()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-rose-950/60 text-slate-400 hover:text-rose-400 text-xs rounded-lg border border-slate-700 transition" title="Reset Simulation">
+                <i class="fa-solid fa-rotate-right"></i>
+            </button>
+        </div>
+
+        <!-- TAB NAVIGATION -->
+        <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 space-x-1">
+            <button id="tab-btn-er" onclick="switchTab('er')" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-sky-600 text-white transition flex items-center space-x-1">
+                <i class="fa-solid fa-sitemap mr-1"></i> Connected ER Diagram
+            </button>
+            <button id="tab-btn-sql" onclick="switchTab('sql')" class="px-3 py-1.5 text-xs font-medium rounded-lg text-slate-400 hover:text-white transition flex items-center space-x-1">
+                <i class="fa-solid fa-terminal mr-1"></i> SQL Execution Pipeline
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN WORKSPACE -->
+    <main class="flex-1 p-6 relative flex flex-col">
+
+        <!-- TAB 1: CONNECTED ER DIAGRAM -->
+        <section id="tab-er" class="flex-1 flex flex-col space-y-4">
+            
+            <!-- STAGE STATUS BANNER -->
+            <div class="bg-cardbg border border-bordercolor rounded-xl p-3 flex justify-between items-center text-xs">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-circle-info text-sky-400"></i>
+                    <span class="text-slate-400">Execution Mechanics: <strong id="stage-summary" class="text-white font-mono">Pre-existing data loaded. Press Step Forward to trigger new order transaction.</strong></span>
+                </div>
+                <div class="flex items-center space-x-4 text-[11px] font-mono">
+                    <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-yellow-400 mr-1.5"></span> PK (Yellow Text)</span>
+                    <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-purple-400 mr-1.5"></span> FK (Purple Header)</span>
+                    <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-1.5"></span> Green Highlight (Write/Update)</span>
+                </div>
+            </div>
+
+            <!-- ER DIAGRAM CANVAS WITH DYNAMIC SVG CONNECTORS -->
+            <div class="relative flex-1 bg-slate-950 border border-slate-800 rounded-2xl p-6 min-h-[580px] overflow-x-auto flex flex-col justify-between">
+                
+                <!-- DYNAMIC SVG CONNECTOR LAYER -->
+                <svg id="svg-layer" class="absolute inset-0 w-full h-full pointer-events-none z-10">
+                    <!-- Dynamic connector lines rendered by JS -->
+                </svg>
+
+                <!-- ROW 1: MASTER ENTITIES (3 COLS) -->
+                <div class="grid grid-cols-3 gap-8 z-20">
+                    
+                    <!-- CUSTOMER TABLE -->
+                    <div id="card-customer" class="table-container">
+                        <div class="table-header-title">CUSTOMER</div>
+                        <table class="w-full">
+                            <thead>
+                                <tr>
+                                    <th class="pk-text">customer_id</th>
+                                    <th>name</th>
+                                    <th>phone</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td class="pk-text">1</td><td>Ankit Sharma</td><td>+91 9876543210</td></tr>
+                                <tr><td class="pk-text">2</td><td>Priya Verma</td><td>+91 9123456789</td></tr>
+                                <tr><td class="pk-text">3</td><td>Rahul Mehta</td><td>+91 9988776655</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- RESTAURANT TABLE -->
+                    <div id="card-restaurant" class="table-container">
+                        <div class="table-header-title">RESTAURANT</div>
+                        <table class="w-full">
+                            <thead>
+                                <tr>
+                                    <th class="pk-text">restaurant_id</th>
+                                    <th>name</th>
+                                    <th>location</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td class="pk-text">10</td><td>Gazebo Canteen</td><td>(17.544, 78.571)</td></tr>
+                                <tr><td class="pk-text">14</td><td>Academic Mess</td><td>(17.548, 78.575)</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- MENU_ITEM TABLE -->
+                    <div id="card-menu_item" class="table-container">
+                        <div class="table-header-title">MENU_ITEM</div>
+                        <table class="w-full">
+                            <thead>
+                                <tr>
+                                    <th class="pk-text">item_id</th>
+                                    <th class="fk-header">restaurant_id</th>
+                                    <th>name</th>
+                                    <th>price</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td class="pk-text">5</td><td>10</td><td>Chicken Biryani</td><td>180.00</td></tr>
+                                <tr><td class="pk-text">6</td><td>10</td><td>Paneer Masala</td><td>150.00</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+
+                <!-- ROW 2: TRANSACTION CORE (ORDER & ORDER_ITEM) -->
+                <div class="grid grid-cols-12 gap-8 z-20 my-4">
+                    
+                    <!-- ORDER TABLE -->
+                    <div id="card-order" class="col-span-8 table-container">
+                        <div class="table-header-title">ORDER</div>
+                        <table class="w-full">
+                            <thead>
+                                <tr>
+                                    <th class="pk-text">order_id</th>
+                                    <th class="fk-header">customer_id</th>
+                                    <th class="fk-header">restaurant_id</th>
+                                    <th class="fk-header">driver_id</th>
+                                    <th class="fk-header">destination_id</th>
+                                    <th>status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-order">
+                                <!-- Pre-existing rows (Step 0) -->
+                                <tr>
+                                    <td class="pk-text">99</td>
+                                    <td>2</td>
+                                    <td>10</td>
+                                    <td>402</td>
+                                    <td>21</td>
+                                    <td>DELIVERED</td>
+                                </tr>
+                                <tr>
+                                    <td class="pk-text">100</td>
+                                    <td>1</td>
+                                    <td>10</td>
+                                    <td>401</td>
+                                    <td>20</td>
+                                    <td>DELIVERED</td>
+                                </tr>
+                                <!-- Dynamic Row 101 appended via JS on Step Advance -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- ORDER_ITEM TABLE -->
+                    <div id="card-order_item" class="col-span-4 table-container">
+                        <div class="table-header-title">ORDER_ITEM</div>
+                        <table class="w-full">
+                            <thead>
+                                <tr>
+                                    <th class="fk-header">order_id</th>
+                                    <th class="fk-header">item_id</th>
+                                    <th>quantity</th>
+                                    <th>price_at_order</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-order-item">
+                                <!-- Pre-existing rows (Step 0) -->
+                                <tr><td>99</td><td>5</td><td>1</td><td>180.00</td></tr>
+                                <tr><td>100</td><td>6</td><td>2</td><td>150.00</td></tr>
+                                <!-- Dynamic Row 101 appended via JS on Step Advance -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+
+                <!-- ROW 3: WORKFORCE & SPATIAL ENTITIES -->
+                <div class="grid grid-cols-4 gap-6 z-20">
+                    
+                    <!-- DRIVER TABLE -->
+                    <div id="card-driver" class="table-container">
+                        <div class="table-header-title">DRIVER</div>
+                        <table class="w-full">
+                            <thead>
+                                <tr>
+                                    <th class="pk-text">driver_id</th>
+                                    <th>name</th>
+                                    <th>status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-driver">
+                                <tr id="row-driver-401"><td class="pk-text">401</td><td>Ramesh</td><td id="cell-driver-401-status">AVAILABLE</td></tr>
+                                <tr id="row-driver-402"><td class="pk-text">402</td><td>Suresh</td><td>BUSY</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- LOCATION_TRACE TABLE -->
+                    <div id="card-location_trace" class="table-container">
+                        <div class="table-header-title">LOCATION_TRACE</div>
+                        <table class="w-full">
+                            <thead>
+                                <tr>
+                                    <th class="pk-text">trace_id</th>
+                                    <th class="fk-header">driver_id</th>
+                                    <th>location</th>
+                                    <th>recorded_at</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-location-trace">
+                                <tr><td class="pk-text">5001</td><td>401</td><td>(17.545, 78.572)</td><td>14:20:00</td></tr>
+                                <tr><td class="pk-text">5002</td><td>402</td><td>(17.549, 78.576)</td><td>14:21:00</td></tr>
+                                <!-- Dynamic ping appended on Step 4 -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- DELIVERY_LOCATION TABLE -->
+                    <div id="card-delivery_location" class="table-container">
+                        <div class="table-header-title">DELIVERY_LOCATION</div>
+                        <table class="w-full">
+                            <thead>
+                                <tr>
+                                    <th class="pk-text">location_id</th>
+                                    <th class="fk-header">zone_id</th>
+                                    <th>point</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td class="pk-text">19</td><td>1001</td><td>(17.546, 78.573)</td></tr>
+                                <tr><td class="pk-text">20</td><td>1001</td><td>(17.547, 78.574)</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- CAMPUS_ZONE TABLE -->
+                    <div id="card-campus_zone" class="table-container">
+                        <div class="table-header-title">CAMPUS_ZONE</div>
+                        <table class="w-full">
+                            <thead>
+                                <tr>
+                                    <th class="pk-text">zone_id</th>
+                                    <th>zone_name</th>
+                                    <th>boundary</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td class="pk-text">1001</td><td>Hostel Zone</td><td>POLYGON(...)</td></tr>
+                                <tr><td class="pk-text">1002</td><td>Academic Zone</td><td>POLYGON(...)</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+
+            </div>
+        </section>
+
+        <!-- TAB 2: EXECUTION SQL -->
+        <section id="tab-sql" class="hidden flex-1 grid grid-cols-12 gap-6">
+            <div class="col-span-12 bg-cardbg border border-bordercolor rounded-2xl p-5 shadow-xl flex flex-col">
+                <h2 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-terminal text-emerald-400"></i> Executed Query Pipeline & PostGIS Operations
+                </h2>
+                <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 font-mono text-xs overflow-x-auto flex-1">
+                    <pre id="sql-display" class="text-sky-300 whitespace-pre-wrap">-- Baseline initialized.</pre>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- STEP ENGINE SCRIPT -->
+    <script>
+        let currentStep = 0;
+
+        const connections = [
+            { from: 'customer', to: 'order', id: 'conn-cust-order' },
+            { from: 'restaurant', to: 'order', id: 'conn-rest-order' },
+            { from: 'restaurant', to: 'menu_item', id: 'conn-rest-menu' },
+            { from: 'order', to: 'order_item', id: 'conn-order-item' },
+            { from: 'menu_item', to: 'order_item', id: 'conn-menu-orderitem' },
+            { from: 'driver', to: 'order', id: 'conn-driver-order' },
+            { from: 'driver', to: 'location_trace', id: 'conn-driver-trace' },
+            { from: 'campus_zone', to: 'delivery_location', id: 'conn-zone-loc' },
+            { from: 'delivery_location', to: 'order', id: 'conn-loc-order' }
+        ];
+
+        const steps = [
+            {
+                step: 0,
+                title: "Step 0 / 5 — Baseline State",
+                stageSummary: "Pre-existing data loaded. Press Step Forward to trigger new order transaction.",
+                activeConnectors: [],
+                sql: "-- Baseline state loaded. Pre-existing orders 99 and 100 present in database."
+            },
+            {
+                step: 1,
+                title: "Step 1 / 5 — Order Creation & Line-Item Write",
+                stageSummary: "INSERT into ORDER (order_id 101) + ORDER_ITEM; price_at_order snapshot written.",
+                activeConnectors: ["conn-cust-order", "conn-rest-order", "conn-order-item", "conn-menu-orderitem"],
+                sql: `BEGIN TRANSACTION;\n\n-- Insert Transaction Header\nINSERT INTO "order" (order_id, customer_id, restaurant_id, status, created_at)\nVALUES (101, 3, 10, 'PENDING', NOW());\n\n-- Insert Line Item with Historical Price Snapshot\nINSERT INTO order_item (order_id, item_id, quantity, price_at_order)\nVALUES (101, 5, 2, 180.00);\n\nCOMMIT;`
+            },
+            {
+                step: 2,
+                title: "Step 2 / 5 — Canteen Acceptance State Change",
+                stageSummary: "UPDATE ORDER (101) SET status = 'PREPARING'.",
+                activeConnectors: ["conn-rest-order"],
+                sql: `UPDATE "order" \nSET status = 'PREPARING'\nWHERE order_id = 101 AND status = 'PENDING';`
+            },
+            {
+                step: 3,
+                title: "Step 3 / 5 — PostGIS KNN Driver Match & Dispatch",
+                stageSummary: "KNN (<->) search matches Driver 401; order status updated to DISPATCHED.",
+                activeConnectors: ["conn-driver-order", "conn-driver-trace"],
+                sql: `-- PostGIS KNN Nearest Neighbor Bounding Box Operator (<->)\nSELECT d.driver_id FROM driver d JOIN location_trace lt ON d.driver_id = lt.driver_id\nJOIN restaurant r ON r.restaurant_id = 10 WHERE d.status = 'AVAILABLE'\nORDER BY lt.location <-> r.location LIMIT 1;\n\nUPDATE "order" SET driver_id = 401, status = 'DISPATCHED' WHERE order_id = 101;\nUPDATE driver SET status = 'BUSY' WHERE driver_id = 401;`
+            },
+            {
+                step: 4,
+                title: "Step 4 / 5 — Proximity Geofence Auto-Pickup (ST_DWithin)",
+                stageSummary: "ST_DWithin(30m) geofence matched; new telemetry ping added; status set to IN_TRANSIT.",
+                activeConnectors: ["conn-rest-order", "conn-driver-trace"],
+                sql: `SELECT ST_DWithin(lt.location::geography, r.location::geography, 30.0)\nFROM location_trace lt, restaurant r WHERE lt.driver_id = 401 AND r.restaurant_id = 10;\n\nINSERT INTO location_trace (trace_id, driver_id, location, recorded_at)\nVALUES (5003, 401, '(17.544, 78.571)', NOW());\n\nUPDATE "order" SET status = 'IN_TRANSIT' WHERE order_id = 101;`
+            },
+            {
+                step: 5,
+                title: "Step 5 / 5 — Polygon Containment & Settlement (ST_Contains)",
+                stageSummary: "ST_Contains verifies dropoff point inside CAMPUS_ZONE polygon; order DELIVERED.",
+                activeConnectors: ["conn-zone-loc", "conn-loc-order", "conn-driver-order"],
+                sql: `SELECT ST_Contains(cz.boundary, dl.point)\nFROM campus_zone cz JOIN delivery_location dl ON cz.zone_id = dl.zone_id\nWHERE dl.location_id = 19;\n\nUPDATE "order" SET status = 'DELIVERED' WHERE order_id = 101;\nUPDATE driver SET status = 'AVAILABLE' WHERE driver_id = 401;`
+            }
+        ];
+
+        function renderTableState() {
+            const data = steps[currentStep];
+
+            document.getElementById('step-indicator').innerText = data.title;
+            document.getElementById('stage-summary').innerText = data.stageSummary;
+            document.getElementById('sql-display').innerText = data.sql;
+
+            document.getElementById('btn-prev').disabled = currentStep === 0;
+            document.getElementById('btn-next').disabled = currentStep === steps.length - 1;
+
+            // --- RENDER ORDER TABLE ---
+            const tbodyOrder = document.getElementById('tbody-order');
+            let orderHtml = `
+                <tr><td class="pk-text">99</td><td>2</td><td>10</td><td>402</td><td>21</td><td>DELIVERED</td></tr>
+                <tr><td class="pk-text">100</td><td>1</td><td>10</td><td>401</td><td>20</td><td>DELIVERED</td></tr>
+            `;
+
+            if (currentStep >= 1) {
+                let driverIdVal = currentStep >= 3 ? "401" : "NULL";
+                let statusVal = "PENDING";
+                if (currentStep === 2) statusVal = "PREPARING";
+                if (currentStep === 3) statusVal = "DISPATCHED";
+                if (currentStep === 4) statusVal = "IN_TRANSIT";
+                if (currentStep === 5) statusVal = "DELIVERED";
+
+                let highlightClass = currentStep === 1 ? "new-row-highlight" : "";
+                let driverHighlight = currentStep === 3 ? "cell-update-highlight" : "";
+                let statusHighlight = currentStep >= 2 ? "cell-update-highlight" : "";
+
+                orderHtml += `
+                    <tr class="${highlightClass}">
+                        <td class="pk-text">101</td>
+                        <td>3</td>
+                        <td>10</td>
+                        <td class="${driverHighlight}">${driverIdVal}</td>
+                        <td>19</td>
+                        <td class="${statusHighlight}">${statusVal}</td>
+                    </tr>
+                `;
+            }
+            tbodyOrder.innerHTML = orderHtml;
+
+            // --- RENDER ORDER_ITEM TABLE ---
+            const tbodyOrderItem = document.getElementById('tbody-order-item');
+            let itemHtml = `
+                <tr><td>99</td><td>5</td><td>1</td><td>180.00</td></tr>
+                <tr><td>100</td><td>6</td><td>2</td><td>150.00</td></tr>
+            `;
+            if (currentStep >= 1) {
+                let highlightClass = currentStep === 1 ? "new-row-highlight" : "";
+                itemHtml += `
+                    <tr class="${highlightClass}">
+                        <td>101</td>
+                        <td>5</td>
+                        <td>2</td>
+                        <td>180.00</td>
+                    </tr>
+                `;
+            }
+            tbodyOrderItem.innerHTML = itemHtml;
+
+            // --- RENDER DRIVER TABLE ---
+            const cellDriverStatus = document.getElementById('cell-driver-401-status');
+            const rowDriver = document.getElementById('row-driver-401');
+            if (currentStep >= 3 && currentStep < 5) {
+                cellDriverStatus.innerText = "BUSY";
+                cellDriverStatus.className = "cell-update-highlight";
+            } else {
+                cellDriverStatus.innerText = "AVAILABLE";
+                cellDriverStatus.className = "";
+            }
+
+            // --- RENDER LOCATION_TRACE TABLE ---
+            const tbodyTrace = document.getElementById('tbody-location-trace');
+            let traceHtml = `
+                <tr><td class="pk-text">5001</td><td>401</td><td>(17.545, 78.572)</td><td>14:20:00</td></tr>
+                <tr><td class="pk-text">5002</td><td>402</td><td>(17.549, 78.576)</td><td>14:21:00</td></tr>
+            `;
+            if (currentStep >= 4) {
+                let highlightClass = currentStep === 4 ? "new-row-highlight" : "";
+                traceHtml += `
+                    <tr class="${highlightClass}">
+                        <td class="pk-text">5003</td>
+                        <td>401</td>
+                        <td>(17.544, 78.571)</td>
+                        <td>14:22:15</td>
+                    </tr>
+                `;
+            }
+            tbodyTrace.innerHTML = traceHtml;
+
+            drawConnectors();
+        }
+
+        function drawConnectors() {
+            const svg = document.getElementById('svg-layer');
+            if (!svg) return;
+            const svgRect = svg.getBoundingClientRect();
+
+            svg.innerHTML = '';
+
+            const data = steps[currentStep];
+
+            connections.forEach(c => {
+                const elFrom = document.getElementById(`card-${c.from}`);
+                const elTo = document.getElementById(`card-${c.to}`);
+                if (!elFrom || !elTo) return;
+
+                const rFrom = elFrom.getBoundingClientRect();
+                const rTo = elTo.getBoundingClientRect();
+
+                const x1 = (rFrom.left + rFrom.width / 2) - svgRect.left;
+                const y1 = (rFrom.top + rFrom.height / 2) - svgRect.top;
+                const x2 = (rTo.left + rTo.width / 2) - svgRect.left;
+                const y2 = (rTo.top + rTo.height / 2) - svgRect.top;
+
+                const isActive = data.activeConnectors.includes(c.id);
+
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                const dy = (y2 - y1) / 2;
+                path.setAttribute('d', `M ${x1} ${y1} C ${x1} ${y1 + dy}, ${x2} ${y2 - dy}, ${x2} ${y2}`);
+                path.setAttribute('class', isActive ? 'fk-line fk-line-active' : 'fk-line');
+                path.setAttribute('id', c.id);
+                svg.appendChild(path);
+            });
+        }
+
+        function changeStep(delta) {
+            currentStep = Math.max(0, Math.min(steps.length - 1, currentStep + delta));
+            renderTableState();
+        }
+
+        function resetExecution() {
+            currentStep = 0;
+            renderTableState();
+        }
+
+        function switchTab(tab) {
+            ['er', 'sql'].forEach(t => {
+                document.getElementById(`tab-${t}`).classList.add('hidden');
+                document.getElementById(`tab-btn-${t}`).className = 'px-3 py-1.5 text-xs font-medium rounded-lg text-slate-400 hover:text-white transition flex items-center space-x-1';
+            });
+
+            document.getElementById(`tab-${tab}`).classList.remove('hidden');
+            document.getElementById(`tab-btn-${tab}`).className = 'px-3 py-1.5 text-xs font-medium rounded-lg bg-sky-600 text-white transition flex items-center space-x-1';
+
+            if (tab === 'er') setTimeout(drawConnectors, 50);
+        }
+
+        window.onload = function() {
+            renderTableState();
+            window.addEventListener('resize', drawConnectors);
+        };
+    </script>
+</body>
+</html>
