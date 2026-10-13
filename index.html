@@ -229,7 +229,7 @@
                 </div>
 
                 <!-- ROW 2: TRANSACTION CORE (ORDER & ORDER_ITEM) -->
-                <div class="flex justify-center items-start gap-16 z-20 my-6 px-4">
+                <div class="flex justify-center items-start gap-12 z-20 my-6 px-4">
                     
                     <!-- ORDER TABLE -->
                     <div id="card-order" class="table-container">
@@ -243,6 +243,8 @@
                                     <th class="fk-header">driver_id</th>
                                     <th class="fk-header">destination_id</th>
                                     <th>status</th>
+                                    <th>created_at</th>
+                                    <th>fulfilled_at</th>
                                 </tr>
                             </thead>
                             <tbody id="tbody-order">
@@ -254,6 +256,8 @@
                                     <td>402</td>
                                     <td>21</td>
                                     <td>DELIVERED</td>
+                                    <td>14:00:00</td>
+                                    <td>14:18:00</td>
                                 </tr>
                                 <tr>
                                     <td class="pk-text">100</td>
@@ -262,6 +266,8 @@
                                     <td>401</td>
                                     <td>20</td>
                                     <td>DELIVERED</td>
+                                    <td>14:05:00</td>
+                                    <td>14:22:00</td>
                                 </tr>
                                 <!-- Dynamic Row 101 appended via JS on Step Advance -->
                             </tbody>
@@ -416,7 +422,7 @@
                 title: "Step 1 / 5 — Order Creation & Table Update",
                 stageSummary: "New order placed. New rows added to ORDER and ORDER_ITEM tables.",
                 activeConnectors: ["conn-cust-order", "conn-rest-order", "conn-order-item", "conn-menu-orderitem"],
-                sql: `BEGIN TRANSACTION;\n\n-- Insert Transaction Header\nINSERT INTO "order" (order_id, customer_id, restaurant_id, status, created_at)\nVALUES (101, 3, 10, 'PENDING', NOW());\n\n-- Insert Line Item with Historical Price Snapshot\nINSERT INTO order_item (order_id, item_id, quantity, price_at_order)\nVALUES (101, 5, 2, 180.00);\n\nCOMMIT;`
+                sql: `BEGIN TRANSACTION;\n\n-- Insert Transaction Header\nINSERT INTO "order" (order_id, customer_id, restaurant_id, status, created_at, fulfilled_at)\nVALUES (101, 3, 10, 'PENDING', NOW(), NULL);\n\n-- Insert Line Item with Historical Price Snapshot\nINSERT INTO order_item (order_id, item_id, quantity, price_at_order)\nVALUES (101, 5, 2, 180.00);\n\nCOMMIT;`
             },
             {
                 step: 2,
@@ -444,7 +450,7 @@
                 title: "Step 5 / 5 — Order Delivered Successfully",
                 stageSummary: "Order handed to customer. ORDER status set to DELIVERED and Driver freed to AVAILABLE.",
                 activeConnectors: ["conn-zone-loc", "conn-loc-order", "conn-driver-order"],
-                sql: `SELECT ST_Contains(cz.boundary, dl.point)\nFROM campus_zone cz JOIN delivery_location dl ON cz.zone_id = dl.zone_id\nWHERE dl.location_id = 19;\n\nUPDATE "order" SET status = 'DELIVERED' WHERE order_id = 101;\nUPDATE driver SET status = 'AVAILABLE' WHERE driver_id = 401;`
+                sql: `SELECT ST_Contains(cz.boundary, dl.point)\nFROM campus_zone cz JOIN delivery_location dl ON cz.zone_id = dl.zone_id\nWHERE dl.location_id = 19;\n\nUPDATE "order" SET status = 'DELIVERED', fulfilled_at = NOW() WHERE order_id = 101;\nUPDATE driver SET status = 'AVAILABLE' WHERE driver_id = 401;`
             }
         ];
 
@@ -461,21 +467,45 @@
             // --- RENDER ORDER TABLE ---
             const tbodyOrder = document.getElementById('tbody-order');
             let orderHtml = `
-                <tr><td class="pk-text">99</td><td>2</td><td>10</td><td>402</td><td>21</td><td>DELIVERED</td></tr>
-                <tr><td class="pk-text">100</td><td>1</td><td>10</td><td>401</td><td>20</td><td>DELIVERED</td></tr>
+                <tr>
+                    <td class="pk-text">99</td>
+                    <td>2</td>
+                    <td>10</td>
+                    <td>402</td>
+                    <td>21</td>
+                    <td>DELIVERED</td>
+                    <td>14:00:00</td>
+                    <td>14:18:00</td>
+                </tr>
+                <tr>
+                    <td class="pk-text">100</td>
+                    <td>1</td>
+                    <td>10</td>
+                    <td>401</td>
+                    <td>20</td>
+                    <td>DELIVERED</td>
+                    <td>14:05:00</td>
+                    <td>14:22:00</td>
+                </tr>
             `;
 
             if (currentStep >= 1) {
                 let driverIdVal = currentStep >= 3 ? "401" : "NULL";
                 let statusVal = "PENDING";
+                let fulfilledVal = "NULL";
+
                 if (currentStep === 2) statusVal = "PREPARING";
                 if (currentStep === 3) statusVal = "DISPATCHED";
                 if (currentStep === 4) statusVal = "IN_TRANSIT";
-                if (currentStep === 5) statusVal = "DELIVERED";
+                if (currentStep === 5) {
+                    statusVal = "DELIVERED";
+                    fulfilledVal = "14:38:00";
+                }
 
                 let highlightClass = currentStep === 1 ? "new-row-highlight" : "";
                 let driverHighlight = currentStep === 3 ? "cell-update-highlight" : "";
                 let statusHighlight = currentStep >= 2 ? "cell-update-highlight" : "";
+                let fulfilledHighlight = currentStep === 5 ? "cell-update-highlight" : "";
 
                 orderHtml += `
                     <tr class="${highlightClass}">
@@ -485,6 +515,8 @@
                         <td class="${driverHighlight}">${driverIdVal}</td>
                         <td>19</td>
                         <td class="${statusHighlight}">${statusVal}</td>
+                        <td>14:25:00</td>
+                        <td class="${fulfilledHighlight}">${fulfilledVal}</td>
                     </tr>
                 `;
             }
