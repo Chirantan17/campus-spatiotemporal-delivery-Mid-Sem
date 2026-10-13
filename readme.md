@@ -1,23 +1,23 @@
 # 🛰️ Campus Spatiotemporal Delivery Engine
-> **Course:** Advanced Database Systems (CS G516)[cite: 12]  
-> **Evaluation Milestone:** Mid-Semester (Labs 1–3 Deliverables)[cite: 12]  
-> **Live DB Execution Inspector:** [https://chirantan17.github.io/campus-spatiotemporal-delivery-Mid-Sem/](https://chirantan17.github.io/campus-spatiotemporal-delivery-Mid-Sem/)[cite: 8]
+> **Course:** Advanced Database Systems (CS G516)  
+> **Evaluation Milestone:** Mid-Semester (Labs 1–3 Deliverables)  
+> **Live DB Execution Inspector:** [https://chirantan17.github.io/campus-spatiotemporal-delivery-Mid-Sem/](https://chirantan17.github.io/campus-spatiotemporal-delivery-Mid-Sem/)
 
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-336791?style=for-the-badge&logo=postgresql&logoColor=white)[cite: 12]
-![PostGIS](https://img.shields.io/badge/PostGIS-3.3-22c55e?style=for-the-badge&logo=postgis&logoColor=white)[cite: 12]
-![Docker](https://img.shields.io/badge/Docker-24.0-2496ED?style=for-the-badge&logo=docker&logoColor=white)[cite: 12]
-![Streamlit](https://img.shields.io/badge/Streamlit-1.28-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)[cite: 12]
-![Python](https://img.shields.io/badge/Python-3.10-3776AB?style=for-the-badge&logo=python&logoColor=white)[cite: 12]
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-336791?style=for-the-badge&logo=postgresql&logoColor=white)
+![PostGIS](https://img.shields.io/badge/PostGIS-3.3-22c55e?style=for-the-badge&logo=postgis&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-24.0-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![Streamlit](https://img.shields.io/badge/Streamlit-1.28-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.10-3776AB?style=for-the-badge&logo=python&logoColor=white)
 
 ---
 
 ## 📌 Executive Summary
 
-![Dashboard Preview](dashboard_demo.png)[cite: 12]
+![Dashboard Preview](dashboard_demo.png)
 
-This repository contains the mid-semester spatiotemporal engine baseline for a campus last-mile delivery system[cite: 12]. Built using **PostgreSQL/PostGIS**, the system addresses high-concurrency spatial data ingestion by decoupling static transactional state tables from append-only high-frequency telemetry streams[cite: 12]. 
+This repository contains the mid-semester spatiotemporal engine baseline for a campus last-mile delivery system. Built using **PostgreSQL/PostGIS**, the system addresses high-concurrency spatial data ingestion by decoupling static transactional state tables from append-only high-frequency telemetry streams. 
 
-The implementation covers physical schema generation, EPSG:4326 coordinate reference system (CRS) standardizations, spatial Generalized Search Tree (GiST) indexing, native PostGIS spatial operators, and an interactive step-by-step Execution Flow Inspector[cite: 12].
+The implementation covers physical schema generation, EPSG:4326 coordinate reference system (CRS) standardizations, spatial Generalized Search Tree (GiST) indexing, native PostGIS spatial operators, and an interactive step-by-step Execution Flow Inspector.
 
 ---
 
@@ -25,9 +25,9 @@ The implementation covers physical schema generation, EPSG:4326 coordinate refer
 
 | Lab Milestone | Core Objectives | Technical Implementation & Deliverables |
 | :--- | :--- | :--- |
-| **Lab 1: Schema & Indexing** | Physical schema modeling, Spatial CRS configuration, Indexing strategies | • Containerized PostgreSQL 15 + PostGIS 3.3 engine via Docker.<br>• Mapped geometries using `EPSG:4326` (WGS 84).<br>• Constructed `GEOMETRY(POLYGON)` and `GEOMETRY(POINT)` entities.<br>• Applied Generalized Search Tree (**GiST**) spatial indexes across geometry columns. |[cite: 12]
-| **Lab 2: Ingestion & Telemetry** | Spatial seeding, Boundary definition, Decoupled ingestion | • Seeded complex campus zone polygons via WKT (`ST_GeomFromText`).<br>• Linked delivery drop-offs (`delivery_location`) to zone foreign keys.<br>• Designed an **append-only time-series telemetry table** (`location_trace`) to eliminate row-locking during concurrent GPS pings. |[cite: 12]
-| **Lab 3: Operators & UI** | PostGIS query execution, Spatial mechanics, Interactive visualization | • Evaluated zone spatial containment via `ST_Contains`.<br>• Performed 30m proximity checks using `ST_DWithin`.<br>• Implemented $O(\log N)$ nearest-driver matching via KNN (`<->` operator).<br>• Built an interactive Execution Flow Inspector (`index.html`) & Streamlit dashboard (`app.py`). |[cite: 12]
+| **Lab 1: Schema & Indexing** | Physical schema modeling, Spatial CRS configuration, Indexing strategies | • Containerized PostgreSQL 15 + PostGIS 3.3 engine via Docker.<br>• Mapped geometries using `EPSG:4326` (WGS 84).<br>• Constructed `GEOMETRY(POLYGON)` and `GEOMETRY(POINT)` entities.<br>• Applied Generalized Search Tree (**GiST**) spatial indexes across geometry columns. |
+| **Lab 2: Ingestion & Telemetry** | Spatial seeding, Boundary definition, Decoupled ingestion | • Seeded complex campus zone polygons via WKT (`ST_GeomFromText`).<br>• Linked delivery drop-offs (`delivery_location`) to zone foreign keys.<br>• Designed an **append-only time-series telemetry table** (`location_trace`) to eliminate row-locking during concurrent GPS pings. |
+| **Lab 3: Operators & UI** | PostGIS query execution, Spatial mechanics, Interactive visualization | • Evaluated zone spatial containment via `ST_Contains`.<br>• Performed 30m proximity checks using `ST_DWithin`.<br>• Implemented $O(\log N)$ nearest-driver matching via KNN (`<->` operator).<br>• Built an interactive Execution Flow Inspector (`index.html`) & Streamlit dashboard (`app.py`). |
 
 ---
 
