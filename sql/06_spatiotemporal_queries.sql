@@ -45,3 +45,21 @@ LEFT JOIN "order" o ON o.destination_id = dl.location_id
 LEFT JOIN order_item oi ON o.order_id = oi.order_id
 GROUP BY z.zone_id, z.zone_name
 ORDER BY revenue_inr DESC;
+
+-- ============================================================================
+-- FLAGSHIP SPATIO-TEMPORAL AGGREGATION
+-- ============================================================================
+
+-- Q6.5: Continuous Trajectory Synthesis - Reconstruct full driver travel path (LINESTRING) from discrete pings
+SELECT d.driver_id,
+       d.name AS driver_name,
+       COUNT(lt.trace_id) AS total_telemetry_pings,
+       MIN(lt.recorded_at) AS trip_start_time,
+       MAX(lt.recorded_at) AS trip_end_time,
+       ST_MakeLine(lt.location ORDER BY lt.recorded_at) AS continuous_trajectory_geom,
+       ROUND((ST_Length(ST_MakeLine(lt.location ORDER BY lt.recorded_at)::geography))::numeric, 2) AS total_distance_covered_meters
+FROM driver d
+JOIN location_trace lt ON d.driver_id = lt.driver_id
+GROUP BY d.driver_id, d.name
+HAVING COUNT(lt.trace_id) > 1
+ORDER BY d.driver_id;

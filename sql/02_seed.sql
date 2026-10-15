@@ -1,6 +1,6 @@
 TRUNCATE TABLE location_trace, order_item, "order", menu_item, customer, delivery_location, restaurant, driver, campus_zone RESTART IDENTITY CASCADE;
 
--- 1. CAMPUS ZONES
+-- 1. CAMPUS ZONES (Geofences)
 INSERT INTO campus_zone (zone_name, boundary) VALUES
 ('Academic Zone', ST_GeomFromText('POLYGON((78.540 17.520, 78.545 17.520, 78.545 17.525, 78.540 17.525, 78.540 17.520))', 4326)),
 ('Hostel Zone A', ST_GeomFromText('POLYGON((78.545 17.520, 78.550 17.520, 78.550 17.525, 78.545 17.525, 78.545 17.520))', 4326)),
@@ -15,7 +15,7 @@ INSERT INTO driver (name, phone, status) VALUES
 ('Driver C (Anita)',  '9876543212', 'AVAILABLE'),
 ('Driver D (Vikram)', '9876543213', 'BUSY'),
 ('Driver E (Pooja)',  '9876543214', 'AVAILABLE'),
-('Driver F (Karan)',  '9876543215', 'OFFLINE');
+('Driver F (Karan)',  '9876543215', 'OFFLINE'); -- Edge Case: Offline driver excluded from telemetry/dispatch
 
 -- 3. RESTAURANTS
 INSERT INTO restaurant (name, phone, location) VALUES
@@ -77,7 +77,7 @@ INSERT INTO menu_item (restaurant_id, name, price, prep_time_minutes) VALUES
 (5, 'Set Dosa',            75.00,  8),
 (5, 'Badam Milk',          50.00,  3);
 
--- 7. ORDERS
+-- 7. ORDERS (Includes Edge Cases: NULL Driver, CANCELLED order)
 INSERT INTO "order" (customer_id, restaurant_id, driver_id, destination_id, status, created_at, fulfilled_at) VALUES
 (1, 1, 1, 3, 'PREPARING',  CURRENT_TIMESTAMP - INTERVAL '20 minutes', NULL),
 (2, 2, 2, 2, 'DELIVERED',  CURRENT_TIMESTAMP - INTERVAL '110 minutes', CURRENT_TIMESTAMP - INTERVAL '85 minutes'),
@@ -88,7 +88,8 @@ INSERT INTO "order" (customer_id, restaurant_id, driver_id, destination_id, stat
 (7, 2, 2, 6, 'DELIVERED',  CURRENT_TIMESTAMP - INTERVAL '240 minutes', CURRENT_TIMESTAMP - INTERVAL '210 minutes'),
 (8, 4, 3, 7, 'DELIVERED',  CURRENT_TIMESTAMP - INTERVAL '90 minutes', CURRENT_TIMESTAMP - INTERVAL '70 minutes'),
 (9, 5, 5, 9, 'IN_TRANSIT', CURRENT_TIMESTAMP - INTERVAL '25 minutes', NULL),
-(10, 5, 4, 10, 'PENDING',  CURRENT_TIMESTAMP - INTERVAL '5 minutes', NULL);
+(10, 1, NULL, 3, 'PENDING', CURRENT_TIMESTAMP - INTERVAL '5 minutes', NULL),  -- Edge Case: Unassigned NULL driver
+(4, 1, 3, 1, 'CANCELLED', CURRENT_TIMESTAMP - INTERVAL '45 minutes', NULL); -- Edge Case: Explicitly cancelled order
 
 -- 8. ORDER ITEMS
 INSERT INTO order_item (order_id, item_id, quantity, price_at_order) VALUES
@@ -101,9 +102,10 @@ INSERT INTO order_item (order_id, item_id, quantity, price_at_order) VALUES
 (7, 7, 2, 110.00), (7, 9, 2, 50.00),
 (8, 16, 2, 110.00), (8, 18, 3, 40.00),
 (9, 19, 1, 150.00), (9, 20, 2, 35.00),
-(10, 21, 2, 100.00), (10, 23, 2, 50.00);
+(10, 1, 1, 120.00), (10, 2, 2, 70.00),
+(11, 3, 1, 90.00);
 
--- 9. LOCATION TRACE (1,200 GPS pings)
+-- 9. LOCATION TRACE (1,000 GPS pings generated only for active non-OFFLINE drivers)
 INSERT INTO location_trace (driver_id, location, recorded_at)
 SELECT 
     d.driver_id,

@@ -20,3 +20,12 @@ SELECT oi.order_id, COUNT(oi.item_id) AS total_unique_items, SUM(oi.quantity) AS
 FROM order_item oi
 GROUP BY oi.order_id
 ORDER BY oi.order_id;
+
+-- Q3.4: ANOMALY PROOF — Historical Price Snapshot Audit vs Current Menu Catalog Price
+SELECT oi.order_id, mi.name AS item_name,
+       oi.price_at_order AS historical_price_paid,
+       mi.price AS current_catalog_price,
+       (mi.price - oi.price_at_order) AS price_drift_difference
+FROM order_item oi
+JOIN menu_item mi ON oi.item_id = mi.item_id
+ORDER BY oi.order_id;

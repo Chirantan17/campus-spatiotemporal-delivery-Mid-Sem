@@ -29,7 +29,7 @@
             border-radius: 8px;
             overflow: hidden;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
-            width: fit-content; /* Tightly wraps table content */
+            width: fit-content;
             max-width: 100%;
         }
         .table-header-title {
@@ -43,7 +43,7 @@
             text-align: left;
         }
         th, td {
-            padding: 6px 12px; /* Comfortable, legible padding */
+            padding: 6px 12px;
             text-align: left;
             font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
             font-size: 13.5px;
@@ -150,7 +150,7 @@
             <div class="bg-cardbg border border-bordercolor rounded-xl p-3 flex justify-between items-center text-xs">
                 <div class="flex items-center space-x-2">
                     <i class="fa-solid fa-circle-info text-sky-400"></i>
-                    <span class="text-slate-300 text-xs">Execution Mechanics: <strong id="stage-summary" class="text-white font-mono text-xs">Pre-existing data loaded. Click Step Forward to place a new order.</strong></span>
+                    <span class="text-slate-300 text-xs">Execution Mechanics: <strong id="stage-summary" class="text-white font-mono text-xs">Pre-existing seeded data loaded. Click Step Forward to place new Order 12.</strong></span>
                 </div>
                 <div class="flex items-center space-x-4 text-xs font-mono">
                     <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-yellow-400 mr-1.5"></span> PK (Yellow Text)</span>
@@ -182,9 +182,9 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr><td class="pk-text">1</td><td>Ankit Sharma</td><td>+91 9876543210</td></tr>
-                                <tr><td class="pk-text">2</td><td>Priya Verma</td><td>+91 9123456789</td></tr>
-                                <tr><td class="pk-text">3</td><td>Rahul Mehta</td><td>+91 9988776655</td></tr>
+                                <tr><td class="pk-text">1</td><td>Rahul Sharma</td><td>9123456701</td></tr>
+                                <tr><td class="pk-text">2</td><td>Priya Patel</td><td>9123456702</td></tr>
+                                <tr><td class="pk-text">3</td><td>Amit Verma</td><td>9123456703</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -201,8 +201,8 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr><td class="pk-text">10</td><td>Gazebo Canteen</td><td>(17.544, 78.571)</td></tr>
-                                <tr><td class="pk-text">14</td><td>Academic Mess</td><td>(17.548, 78.575)</td></tr>
+                                <tr><td class="pk-text">1</td><td>Canteen 1 (Main Hub)</td><td>(17.5215, 78.5415)</td></tr>
+                                <tr><td class="pk-text">3</td><td>Hostel 3 Mess & Cafe</td><td>(17.5225, 78.5475)</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -220,8 +220,8 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr><td class="pk-text">5</td><td>10</td><td>Chicken Biryani</td><td>180.00</td></tr>
-                                <tr><td class="pk-text">6</td><td>10</td><td>Paneer Masala</td><td>150.00</td></tr>
+                                <tr><td class="pk-text">1</td><td>1</td><td>Paneer Kathi Roll</td><td>120.00</td></tr>
+                                <tr><td class="pk-text">2</td><td>1</td><td>Cold Coffee</td><td>70.00</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -248,28 +248,28 @@
                                 </tr>
                             </thead>
                             <tbody id="tbody-order">
-                                <!-- Pre-existing rows (Step 0) -->
+                                <!-- Pre-existing rows synced with 02_seed.sql -->
                                 <tr>
-                                    <td class="pk-text">99</td>
-                                    <td>2</td>
-                                    <td>10</td>
-                                    <td>402</td>
-                                    <td>21</td>
-                                    <td>DELIVERED</td>
-                                    <td>14:00:00</td>
-                                    <td>14:18:00</td>
-                                </tr>
-                                <tr>
-                                    <td class="pk-text">100</td>
+                                    <td class="pk-text">10</td>
                                     <td>1</td>
-                                    <td>10</td>
-                                    <td>401</td>
-                                    <td>20</td>
-                                    <td>DELIVERED</td>
-                                    <td>14:05:00</td>
-                                    <td>14:22:00</td>
+                                    <td>1</td>
+                                    <td>NULL</td>
+                                    <td>3</td>
+                                    <td>PENDING</td>
+                                    <td>14:20:00</td>
+                                    <td>NULL</td>
                                 </tr>
-                                <!-- Dynamic Row 101 appended via JS on Step Advance -->
+                                <tr>
+                                    <td class="pk-text">11</td>
+                                    <td>4</td>
+                                    <td>1</td>
+                                    <td>3</td>
+                                    <td>1</td>
+                                    <td>CANCELLED</td>
+                                    <td>14:00:00</td>
+                                    <td>NULL</td>
+                                </tr>
+                                <!-- Dynamic Row 12 appended via JS on Step Advance -->
                             </tbody>
                         </table>
                     </div>
@@ -287,10 +287,10 @@
                                 </tr>
                             </thead>
                             <tbody id="tbody-order-item">
-                                <!-- Pre-existing rows (Step 0) -->
-                                <tr><td>99</td><td>5</td><td>1</td><td>180.00</td></tr>
-                                <tr><td>100</td><td>6</td><td>2</td><td>150.00</td></tr>
-                                <!-- Dynamic Row 101 appended via JS on Step Advance -->
+                                <!-- Pre-existing rows synced with 02_seed.sql -->
+                                <tr><td>10</td><td>1</td><td>1</td><td>120.00</td></tr>
+                                <tr><td>11</td><td>3</td><td>1</td><td>90.00</td></tr>
+                                <!-- Dynamic Row 12 appended via JS on Step Advance -->
                             </tbody>
                         </table>
                     </div>
@@ -312,8 +312,8 @@
                                 </tr>
                             </thead>
                             <tbody id="tbody-driver">
-                                <tr id="row-driver-401"><td class="pk-text">401</td><td>Ramesh</td><td id="cell-driver-401-status">AVAILABLE</td></tr>
-                                <tr id="row-driver-402"><td class="pk-text">402</td><td>Suresh</td><td>BUSY</td></tr>
+                                <tr id="row-driver-1"><td class="pk-text">1</td><td>Driver A (Ramesh)</td><td id="cell-driver-1-status">BUSY</td></tr>
+                                <tr id="row-driver-2"><td class="pk-text">2</td><td>Driver B (Suresh)</td><td id="cell-driver-2-status">AVAILABLE</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -331,9 +331,9 @@
                                 </tr>
                             </thead>
                             <tbody id="tbody-location-trace">
-                                <tr><td class="pk-text">5001</td><td>401</td><td>(17.545, 78.572)</td><td>14:20:00</td></tr>
-                                <tr><td class="pk-text">5002</td><td>402</td><td>(17.549, 78.576)</td><td>14:21:00</td></tr>
-                                <!-- Dynamic ping appended on Step 4 -->
+                                <tr><td class="pk-text">999</td><td>1</td><td>(17.5212, 78.5412)</td><td>14:23:00</td></tr>
+                                <tr><td class="pk-text">1000</td><td>2</td><td>(17.5231, 78.5431)</td><td>14:24:00</td></tr>
+                                <!-- Dynamic telemetry ping appended on Step 4 -->
                             </tbody>
                         </table>
                     </div>
@@ -350,8 +350,8 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr><td class="pk-text">19</td><td>1001</td><td>(17.546, 78.573)</td></tr>
-                                <tr><td class="pk-text">20</td><td>1001</td><td>(17.547, 78.574)</td></tr>
+                                <tr><td class="pk-text">1</td><td>1</td><td>(17.5210, 78.5410)</td></tr>
+                                <tr><td class="pk-text">3</td><td>2</td><td>(17.5210, 78.5460)</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -368,8 +368,8 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr><td class="pk-text">1001</td><td>Hostel Zone</td><td>POLYGON(...)</td></tr>
-                                <tr><td class="pk-text">1002</td><td>Academic Zone</td><td>POLYGON(...)</td></tr>
+                                <tr><td class="pk-text">1</td><td>Academic Zone</td><td>POLYGON(...)</td></tr>
+                                <tr><td class="pk-text">2</td><td>Hostel Zone A</td><td>POLYGON(...)</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -413,44 +413,44 @@
             {
                 step: 0,
                 title: "Step 0 / 5 — Ready to Start",
-                stageSummary: "Pre-existing data loaded. Click Step Forward to place a new order.",
+                stageSummary: "Pre-existing seeded data loaded. Click Step Forward to place new Order 12.",
                 activeConnectors: [],
-                sql: "-- Baseline state loaded. Pre-existing orders 99 and 100 present in database."
+                sql: "-- Baseline state loaded. Pre-existing orders 1 through 11 present in database from 02_seed.sql."
             },
             {
                 step: 1,
                 title: "Step 1 / 5 — Order Creation & Table Update",
-                stageSummary: "New order placed. New rows added to ORDER and ORDER_ITEM tables.",
+                stageSummary: "New order placed by Amit Verma (Customer 3). New rows added to ORDER and ORDER_ITEM tables.",
                 activeConnectors: ["conn-cust-order", "conn-rest-order", "conn-order-item", "conn-menu-orderitem"],
-                sql: `BEGIN TRANSACTION;\n\n-- Insert Transaction Header\nINSERT INTO "order" (order_id, customer_id, restaurant_id, status, created_at, fulfilled_at)\nVALUES (101, 3, 10, 'PENDING', NOW(), NULL);\n\n-- Insert Line Item with Historical Price Snapshot\nINSERT INTO order_item (order_id, item_id, quantity, price_at_order)\nVALUES (101, 5, 2, 180.00);\n\nCOMMIT;`
+                sql: `BEGIN TRANSACTION;\n\n-- Insert Transaction Header (Customer 3, Restaurant 1, Destination 3, NULL Driver)\nINSERT INTO "order" (order_id, customer_id, restaurant_id, driver_id, destination_id, status, created_at, fulfilled_at)\nVALUES (12, 3, 1, NULL, 3, 'PENDING', NOW(), NULL);\n\n-- Insert Line Item with Historical Price Snapshot\nINSERT INTO order_item (order_id, item_id, quantity, price_at_order)\nVALUES (12, 1, 2, 120.00);\n\nCOMMIT;`
             },
             {
                 step: 2,
                 title: "Step 2 / 5 — Canteen Acceptance & Preparation",
-                stageSummary: "Canteen accepts order. ORDER status updated to PREPARING.",
+                stageSummary: "Canteen 1 accepts order. ORDER status updated to PREPARING.",
                 activeConnectors: ["conn-rest-order"],
-                sql: `UPDATE "order" \nSET status = 'PREPARING'\nWHERE order_id = 101 AND status = 'PENDING';`
+                sql: `UPDATE "order" \nSET status = 'PREPARING'\nWHERE order_id = 12 AND status = 'PENDING';`
             },
             {
                 step: 3,
                 title: "Step 3 / 5 — Searching for Driver & Assigning Order",
-                stageSummary: "Nearest driver found. ORDER status updated to DISPATCHED and Driver set to BUSY.",
+                stageSummary: "Nearest available Driver B (Suresh) assigned via PostGIS KNN (<->). ORDER updated with driver_id = 2.",
                 activeConnectors: ["conn-driver-order", "conn-driver-trace"],
-                sql: `-- PostGIS KNN Nearest Neighbor Bounding Box Operator (<->)\nSELECT d.driver_id FROM driver d JOIN location_trace lt ON d.driver_id = lt.driver_id\nJOIN restaurant r ON r.restaurant_id = 10 WHERE d.status = 'AVAILABLE'\nORDER BY lt.location <-> r.location LIMIT 1;\n\nUPDATE "order" SET driver_id = 401, status = 'DISPATCHED' WHERE order_id = 101;\nUPDATE driver SET status = 'BUSY' WHERE driver_id = 401;`
+                sql: `-- PostGIS KNN Nearest Neighbor Bounding Box Operator (<->)\nSELECT d.driver_id FROM driver d JOIN location_trace lt ON d.driver_id = lt.driver_id\nJOIN restaurant r ON r.restaurant_id = 1 WHERE d.status = 'AVAILABLE'\nORDER BY lt.location <-> r.location LIMIT 1;\n\nUPDATE "order" SET driver_id = 2, status = 'IN_TRANSIT' WHERE order_id = 12;\nUPDATE driver SET status = 'BUSY' WHERE driver_id = 2;`
             },
             {
                 step: 4,
-                title: "Step 4 / 5 — Driver Arrived at Canteen & Order Picked Up",
-                stageSummary: "Driver reaches canteen. ORDER status updated to IN_TRANSIT and GPS location recorded.",
+                title: "Step 4 / 5 — Driver Telemetry & Pickup Geofence Check",
+                stageSummary: "Driver reaches Canteen 1 within 30m (ST_DWithin). Real-time GPS ping logged to LOCATION_TRACE.",
                 activeConnectors: ["conn-rest-order", "conn-driver-trace"],
-                sql: `SELECT ST_DWithin(lt.location::geography, r.location::geography, 30.0)\nFROM location_trace lt, restaurant r WHERE lt.driver_id = 401 AND r.restaurant_id = 10;\n\nINSERT INTO location_trace (trace_id, driver_id, location, recorded_at)\nVALUES (5003, 401, '(17.544, 78.571)', NOW());\n\nUPDATE "order" SET status = 'IN_TRANSIT' WHERE order_id = 101;`
+                sql: `SELECT ST_DWithin(lt.location::geography, r.location::geography, 30.0)\nFROM location_trace lt, restaurant r WHERE lt.driver_id = 2 AND r.restaurant_id = 1;\n\nINSERT INTO location_trace (trace_id, driver_id, location, recorded_at)\nVALUES (1001, 2, ST_SetSRID(ST_MakePoint(78.5415, 17.5215), 4326), NOW());`
             },
             {
                 step: 5,
                 title: "Step 5 / 5 — Order Delivered Successfully",
-                stageSummary: "Order handed to customer. ORDER status set to DELIVERED and Driver freed to AVAILABLE.",
+                stageSummary: "Order delivered inside Hostel Zone A (ST_Contains). ORDER status updated to DELIVERED.",
                 activeConnectors: ["conn-zone-loc", "conn-loc-order", "conn-driver-order"],
-                sql: `SELECT ST_Contains(cz.boundary, dl.point)\nFROM campus_zone cz JOIN delivery_location dl ON cz.zone_id = dl.zone_id\nWHERE dl.location_id = 19;\n\nUPDATE "order" SET status = 'DELIVERED', fulfilled_at = NOW() WHERE order_id = 101;\nUPDATE driver SET status = 'AVAILABLE' WHERE driver_id = 401;`
+                sql: `SELECT ST_Contains(cz.boundary, dl.point)\nFROM campus_zone cz JOIN delivery_location dl ON cz.zone_id = dl.zone_id\nWHERE dl.location_id = 3;\n\nUPDATE "order" SET status = 'DELIVERED', fulfilled_at = NOW() WHERE order_id = 12;\nUPDATE driver SET status = 'AVAILABLE' WHERE driver_id = 2;`
             }
         ];
 
@@ -468,34 +468,34 @@
             const tbodyOrder = document.getElementById('tbody-order');
             let orderHtml = `
                 <tr>
-                    <td class="pk-text">99</td>
-                    <td>2</td>
-                    <td>10</td>
-                    <td>402</td>
-                    <td>21</td>
-                    <td>DELIVERED</td>
-                    <td>14:00:00</td>
-                    <td>14:18:00</td>
+                    <td class="pk-text">10</td>
+                    <td>1</td>
+                    <td>1</td>
+                    <td>NULL</td>
+                    <td>3</td>
+                    <td>PENDING</td>
+                    <td>14:20:00</td>
+                    <td>NULL</td>
                 </tr>
                 <tr>
-                    <td class="pk-text">100</td>
+                    <td class="pk-text">11</td>
+                    <td>4</td>
                     <td>1</td>
-                    <td>10</td>
-                    <td>401</td>
-                    <td>20</td>
-                    <td>DELIVERED</td>
-                    <td>14:05:00</td>
-                    <td>14:22:00</td>
+                    <td>3</td>
+                    <td>1</td>
+                    <td>CANCELLED</td>
+                    <td>14:00:00</td>
+                    <td>NULL</td>
                 </tr>
             `;
 
             if (currentStep >= 1) {
-                let driverIdVal = currentStep >= 3 ? "401" : "NULL";
+                let driverIdVal = currentStep >= 3 ? "2" : "NULL";
                 let statusVal = "PENDING";
                 let fulfilledVal = "NULL";
 
                 if (currentStep === 2) statusVal = "PREPARING";
-                if (currentStep === 3) statusVal = "DISPATCHED";
+                if (currentStep === 3) statusVal = "IN_TRANSIT";
                 if (currentStep === 4) statusVal = "IN_TRANSIT";
                 if (currentStep === 5) {
                     statusVal = "DELIVERED";
@@ -509,11 +509,11 @@
 
                 orderHtml += `
                     <tr class="${highlightClass}">
-                        <td class="pk-text">101</td>
+                        <td class="pk-text">12</td>
                         <td>3</td>
-                        <td>10</td>
+                        <td>1</td>
                         <td class="${driverHighlight}">${driverIdVal}</td>
-                        <td>19</td>
+                        <td>3</td>
                         <td class="${statusHighlight}">${statusVal}</td>
                         <td>14:25:00</td>
                         <td class="${fulfilledHighlight}">${fulfilledVal}</td>
@@ -525,24 +525,24 @@
             // --- RENDER ORDER_ITEM TABLE ---
             const tbodyOrderItem = document.getElementById('tbody-order-item');
             let itemHtml = `
-                <tr><td>99</td><td>5</td><td>1</td><td>180.00</td></tr>
-                <tr><td>100</td><td>6</td><td>2</td><td>150.00</td></tr>
+                <tr><td>10</td><td>1</td><td>1</td><td>120.00</td></tr>
+                <tr><td>11</td><td>3</td><td>1</td><td>90.00</td></tr>
             `;
             if (currentStep >= 1) {
                 let highlightClass = currentStep === 1 ? "new-row-highlight" : "";
                 itemHtml += `
                     <tr class="${highlightClass}">
-                        <td>101</td>
-                        <td>5</td>
+                        <td>12</td>
+                        <td>1</td>
                         <td>2</td>
-                        <td>180.00</td>
+                        <td>120.00</td>
                     </tr>
                 `;
             }
             tbodyOrderItem.innerHTML = itemHtml;
 
             // --- RENDER DRIVER TABLE ---
-            const cellDriverStatus = document.getElementById('cell-driver-401-status');
+            const cellDriverStatus = document.getElementById('cell-driver-2-status');
             if (currentStep >= 3 && currentStep < 5) {
                 cellDriverStatus.innerText = "BUSY";
                 cellDriverStatus.className = "cell-update-highlight";
@@ -554,17 +554,17 @@
             // --- RENDER LOCATION_TRACE TABLE ---
             const tbodyTrace = document.getElementById('tbody-location-trace');
             let traceHtml = `
-                <tr><td class="pk-text">5001</td><td>401</td><td>(17.545, 78.572)</td><td>14:20:00</td></tr>
-                <tr><td class="pk-text">5002</td><td>402</td><td>(17.549, 78.576)</td><td>14:21:00</td></tr>
+                <tr><td class="pk-text">999</td><td>1</td><td>(17.5212, 78.5412)</td><td>14:23:00</td></tr>
+                <tr><td class="pk-text">1000</td><td>2</td><td>(17.5231, 78.5431)</td><td>14:24:00</td></tr>
             `;
             if (currentStep >= 4) {
                 let highlightClass = currentStep === 4 ? "new-row-highlight" : "";
                 traceHtml += `
                     <tr class="${highlightClass}">
-                        <td class="pk-text">5003</td>
-                        <td>401</td>
-                        <td>(17.544, 78.571)</td>
-                        <td>14:22:15</td>
+                        <td class="pk-text">1001</td>
+                        <td>2</td>
+                        <td>(17.5215, 78.5415)</td>
+                        <td>14:26:15</td>
                     </tr>
                 `;
             }
