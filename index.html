@@ -216,12 +216,15 @@
                                     <th class="pk-text">item_id</th>
                                     <th class="fk-header">restaurant_id</th>
                                     <th>name</th>
+                                    <th>category</th>
                                     <th>price</th>
+                                    <th>serve_start</th>
+                                    <th>serve_end</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr><td class="pk-text">1</td><td>1</td><td>Paneer Kathi Roll</td><td>120.00</td></tr>
-                                <tr><td class="pk-text">2</td><td>1</td><td>Cold Coffee</td><td>70.00</td></tr>
+                                <tr><td class="pk-text">1</td><td>1</td><td>Paneer Kathi Roll</td><td>General</td><td>120.00</td><td>06:00:00</td><td>22:00:00</td></tr>
+                                <tr><td class="pk-text">25</td><td>1</td><td>Chicken Tikka Roll</td><td>Snack</td><td>90.00</td><td>16:00:00</td><td>20:00:00</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -243,6 +246,7 @@
                                     <th class="fk-header">driver_id</th>
                                     <th class="fk-header">destination_id</th>
                                     <th>status</th>
+                                    <th>delivery_fee</th>
                                     <th>created_at</th>
                                     <th>fulfilled_at</th>
                                 </tr>
@@ -256,6 +260,7 @@
                                     <td>NULL</td>
                                     <td>3</td>
                                     <td>PENDING</td>
+                                    <td>0.00</td>
                                     <td>14:20:00</td>
                                     <td>NULL</td>
                                 </tr>
@@ -266,6 +271,7 @@
                                     <td>3</td>
                                     <td>1</td>
                                     <td>CANCELLED</td>
+                                    <td>0.00</td>
                                     <td>14:00:00</td>
                                     <td>NULL</td>
                                 </tr>
@@ -282,14 +288,15 @@
                                 <tr>
                                     <th class="fk-header">order_id</th>
                                     <th class="fk-header">item_id</th>
+                                    <th class="fk-header">restaurant_id</th>
                                     <th>quantity</th>
                                     <th>price_at_order</th>
                                 </tr>
                             </thead>
                             <tbody id="tbody-order-item">
                                 <!-- Pre-existing rows synced with 02_seed.sql -->
-                                <tr><td>10</td><td>1</td><td>1</td><td>120.00</td></tr>
-                                <tr><td>11</td><td>3</td><td>1</td><td>90.00</td></tr>
+                                <tr><td>10</td><td>1</td><td>1</td><td>1</td><td>120.00</td></tr>
+                                <tr><td>11</td><td>3</td><td>1</td><td>1</td><td>90.00</td></tr>
                                 <!-- Dynamic Row 12 appended via JS on Step Advance -->
                             </tbody>
                         </table>
@@ -312,7 +319,7 @@
                                 </tr>
                             </thead>
                             <tbody id="tbody-driver">
-                                <tr id="row-driver-1"><td class="pk-text">1</td><td>Driver A (Ramesh)</td><td id="cell-driver-1-status">BUSY</td></tr>
+                                <tr id="row-driver-1"><td class="pk-text">1</td><td>Driver A (Ramesh)</td><td id="cell-driver-1-status">OFFLINE</td></tr>
                                 <tr id="row-driver-2"><td class="pk-text">2</td><td>Driver B (Suresh)</td><td id="cell-driver-2-status">AVAILABLE</td></tr>
                             </tbody>
                         </table>
@@ -422,7 +429,7 @@
                 title: "Step 1 / 5 — Order Creation & Table Update",
                 stageSummary: "New order placed by Amit Verma (Customer 3). New rows added to ORDER and ORDER_ITEM tables.",
                 activeConnectors: ["conn-cust-order", "conn-rest-order", "conn-order-item", "conn-menu-orderitem"],
-                sql: `BEGIN TRANSACTION;\n\n-- Insert Transaction Header (Customer 3, Restaurant 1, Destination 3, NULL Driver)\nINSERT INTO "order" (order_id, customer_id, restaurant_id, driver_id, destination_id, status, created_at, fulfilled_at)\nVALUES (12, 3, 1, NULL, 3, 'PENDING', NOW(), NULL);\n\n-- Insert Line Item with Historical Price Snapshot\nINSERT INTO order_item (order_id, item_id, quantity, price_at_order)\nVALUES (12, 1, 2, 120.00);\n\nCOMMIT;`
+                sql: `BEGIN TRANSACTION;\n\n-- Insert Transaction Header (Customer 3, Restaurant 1, Destination 3, NULL Driver)\nINSERT INTO "order" (order_id, customer_id, restaurant_id, driver_id, destination_id, status, delivery_fee, created_at, fulfilled_at)\nVALUES (12, 3, 1, NULL, 3, 'PENDING', 0.00, NOW(), NULL);\n\n-- Insert Line Item with Historical Price Snapshot and Composite Integrity\nINSERT INTO order_item (order_id, item_id, restaurant_id, quantity, price_at_order)\nVALUES (12, 1, 1, 2, 120.00);\n\nCOMMIT;`
             },
             {
                 step: 2,
@@ -448,9 +455,9 @@
             {
                 step: 5,
                 title: "Step 5 / 5 — Order Delivered Successfully",
-                stageSummary: "Order delivered inside Hostel Zone A (ST_Contains). ORDER status updated to DELIVERED.",
+                stageSummary: "Order delivered inside Hostel Zone A (ST_Covers). ORDER status updated to DELIVERED.",
                 activeConnectors: ["conn-zone-loc", "conn-loc-order", "conn-driver-order"],
-                sql: `SELECT ST_Contains(cz.boundary, dl.point)\nFROM campus_zone cz JOIN delivery_location dl ON cz.zone_id = dl.zone_id\nWHERE dl.location_id = 3;\n\nUPDATE "order" SET status = 'DELIVERED', fulfilled_at = NOW() WHERE order_id = 12;\nUPDATE driver SET status = 'AVAILABLE' WHERE driver_id = 2;`
+                sql: `SELECT ST_Covers(cz.boundary, dl.point)\nFROM campus_zone cz JOIN delivery_location dl ON cz.zone_id = dl.zone_id\nWHERE dl.location_id = 3;\n\nUPDATE "order" SET status = 'DELIVERED', fulfilled_at = NOW() WHERE order_id = 12;\nUPDATE driver SET status = 'AVAILABLE' WHERE driver_id = 2;`
             }
         ];
 
@@ -474,6 +481,7 @@
                     <td>NULL</td>
                     <td>3</td>
                     <td>PENDING</td>
+                    <td>0.00</td>
                     <td>14:20:00</td>
                     <td>NULL</td>
                 </tr>
@@ -484,6 +492,7 @@
                     <td>3</td>
                     <td>1</td>
                     <td>CANCELLED</td>
+                    <td>0.00</td>
                     <td>14:00:00</td>
                     <td>NULL</td>
                 </tr>
@@ -515,6 +524,7 @@
                         <td class="${driverHighlight}">${driverIdVal}</td>
                         <td>3</td>
                         <td class="${statusHighlight}">${statusVal}</td>
+                        <td>0.00</td>
                         <td>14:25:00</td>
                         <td class="${fulfilledHighlight}">${fulfilledVal}</td>
                     </tr>
@@ -525,14 +535,15 @@
             // --- RENDER ORDER_ITEM TABLE ---
             const tbodyOrderItem = document.getElementById('tbody-order-item');
             let itemHtml = `
-                <tr><td>10</td><td>1</td><td>1</td><td>120.00</td></tr>
-                <tr><td>11</td><td>3</td><td>1</td><td>90.00</td></tr>
+                <tr><td>10</td><td>1</td><td>1</td><td>1</td><td>120.00</td></tr>
+                <tr><td>11</td><td>3</td><td>1</td><td>1</td><td>90.00</td></tr>
             `;
             if (currentStep >= 1) {
                 let highlightClass = currentStep === 1 ? "new-row-highlight" : "";
                 itemHtml += `
                     <tr class="${highlightClass}">
                         <td>12</td>
+                        <td>1</td>
                         <td>1</td>
                         <td>2</td>
                         <td>120.00</td>
