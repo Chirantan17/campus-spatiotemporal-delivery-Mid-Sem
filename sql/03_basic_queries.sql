@@ -2,31 +2,71 @@
 -- 1. BASIC RELATIONAL / OPERATIONAL QUERIES
 -- ============================================================================
 
--- Q3.0: FLAGSHIP DIAGNOSTIC - Execute this first for the IC Walkthrough!
--- It should output exactly 1 row (Our intentional Driver Mismatch anomaly)
+-- Q3.0: FLAGSHIP DIAGNOSTIC & ANOMALY DETECTION
+-- Problem Solved: This query demonstrates the system's ability to actively audit 
+-- and flag cross-table logical inconsistencies (IUD anomalies)[cite: 67].
+--
+-- What is the "Driver Mismatch Anomaly"?
+-- It is a severe logistical contradiction where an order is actively progressing 
+-- (status: 'PENDING', 'PREPARING', or 'IN_TRANSIT') and is assigned to a specific driver, 
+-- but that driver's workforce status in the database is incorrectly set to 'OFFLINE'[cite: 67].
+--
+-- Our Assumption:
+-- We assume a strict state-machine dependency between workforce availability and logistics: 
+-- an active delivery absolutely requires a driver in an active state. 
+-- If a driver drops 'OFFLINE' while holding an order, the system inherently loses telemetry 
+-- tracking capabilities, creating a stalled "ghost" delivery[cite: 67].
+-- This diagnostic view immediately catches that exact breakdown[cite: 67].
+--
+-- Expected Output: 1 row identifying Driver A (intentionally set offline in our seed data)[cite: 68].
 SELECT * FROM integrity_audit;
 
--- Q3.1: Fetch full menu catalog for a specific canteen
+-- ============================================================================
+-- SYSTEM INTRODUCTION & OVERVIEW
+-- ============================================================================
+
+-- Q3.1: Campus Dining Infrastructure Summary (Count of Canteens vs Messes)
+-- Provides an introductory count of how many operational facilities are currently in the system
+SELECT facility_type, COUNT(*) AS total_facilities
+FROM restaurant
+GROUP BY facility_type
+ORDER BY facility_type;
+
+-- Q3.2: Complete List of Active Canteens
+-- Generates a roster of all specific canteens available for active student ordering
+SELECT restaurant_id, name AS canteen_name, target_demographic, phone
+FROM restaurant
+WHERE facility_type = 'Canteen'
+ORDER BY restaurant_id;
+
+-- ============================================================================
+-- FOCUSED MENU & ORDER LOGIC
+-- ============================================================================
+
+-- Q3.3: Fetch full menu catalog for a specific canteen (Focusing on Canteen 1)
+-- Includes temporal bounds (serve_start_time, serve_end_time) mapped to each item
 SELECT mi.item_id, mi.name AS item_name, mi.category, mi.price, 
        mi.serve_start_time, mi.serve_end_time, r.name AS restaurant_name
 FROM menu_item mi
 JOIN restaurant r ON mi.restaurant_id = r.restaurant_id
 WHERE r.name = 'Canteen 1 (Main Hub)';
 
--- Q3.2: List active pending/preparing orders with customer details
+-- Q3.4: List active pending/preparing orders with customer details[cite: 66]
 SELECT o.order_id, c.name AS customer_name, c.phone, r.name AS canteen_name, o.status, o.created_at
 FROM "order" o
 JOIN customer c ON o.customer_id = c.customer_id
 JOIN restaurant r ON o.restaurant_id = r.restaurant_id
 WHERE o.status IN ('PENDING', 'PREPARING');
 
--- Q3.3: Utilize the Order Total View (Proves derived totals vs redundant storage)
+-- Q3.5: Utilize the Order Total View 
+-- Proves we eliminate storing redundant totals by calculating them dynamically via a VIEW[cite: 66].
 SELECT ot.order_id, ot.total_amount AS final_invoice_total, o.delivery_fee, o.status
 FROM order_total ot
 JOIN "order" o ON ot.order_id = o.order_id
 ORDER BY ot.order_id;
 
--- Q3.4: ANOMALY PROOF — Historical Price Snapshot Audit
+-- Q3.6: ANOMALY PROOF — Historical Price Snapshot Audit
+-- Proves that updating current menu prices does not corrupt historical order totals[cite: 66].
 SELECT oi.order_id, mi.name AS item_name,
        oi.price_at_order AS historical_price_paid,
        mi.price AS current_catalog_price,
@@ -35,7 +75,8 @@ FROM order_item oi
 JOIN menu_item mi ON oi.item_id = mi.item_id
 ORDER BY oi.order_id;
 
--- Q3.5: List all dining facilities and their ratings
+-- Q3.7: List all dining facilities and their ratings
+-- Used later for predictive behavioral analysis based on student ratings[cite: 66].
 SELECT r.restaurant_id, r.name, r.facility_type, r.target_demographic, r.student_rating
 FROM restaurant r
 ORDER BY r.student_rating DESC;

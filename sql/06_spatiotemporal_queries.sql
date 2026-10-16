@@ -2,7 +2,9 @@
 -- 4. SPATIO-TEMPORAL QUERIES (Combined Spatial & Temporal Constraints)
 -- ============================================================================
 
--- Q6.1: Automated Pickup Geofence Check - Detect drivers within 30m of canteen for active orders
+-- Q6.1: Automated Pickup Geofence Check - Detect drivers within 30m of canteen-1
+--since ramesh is currently held for active orders-for c1 it must show -0m
+--and his status as busy
 WITH latest_telemetry AS (
     SELECT DISTINCT ON (driver_id) driver_id, location, recorded_at
     FROM location_trace
@@ -19,6 +21,7 @@ WHERE o.status = 'PREPARING'
   AND ST_DWithin(lt.location::geography, r.location::geography, 30);
 
 -- Q6.2: Nearest Available Driver Dispatch via GiST Index KNN Operator (<->) 
+--for canteen-1 -main hub
 WITH latest_telemetry AS (
     SELECT DISTINCT ON (driver_id) driver_id, location, recorded_at
     FROM location_trace

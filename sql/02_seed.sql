@@ -58,7 +58,7 @@ INSERT INTO customer (name, phone, email) VALUES
 
 -- 6. MENU ITEMS 
 INSERT INTO menu_item (restaurant_id, name, category, price, serve_start_time, serve_end_time, prep_time_minutes) VALUES
-(1, 'Paneer Kathi Roll',  'General', 120.00, '06:00:00', '22:00:00', 10),
+(1, 'Veg-Thali',  'General', 120.00, '06:00:00', '22:00:00', 10),
 (1, 'Cold Coffee',         'General',  70.00, '06:00:00', '22:00:00', 5),
 (1, 'Veg Cheese Burger',   'General',  90.00, '06:00:00', '22:00:00', 8),
 (1, 'Samosa Chat',         'General',  60.00, '06:00:00', '22:00:00', 5),
