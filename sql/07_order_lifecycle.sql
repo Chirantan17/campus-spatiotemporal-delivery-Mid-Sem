@@ -2,26 +2,23 @@
 -- 07_order_lifecycle.sql - End-to-End Transaction & Spatiotemporal Execution
 -- ============================================================================
 -- Purpose: This script walks the faculty through a complete order lifecycle 
--- using pure raw SQL. It mirrors the exact 5-step process shown in the 
--- interactive index.html visualizer.
+-- using pure raw SQL. It visually outputs the exact table state after EVERY 
+-- single action to prove the database logic is actively functioning in real-time.
 --
 -- Note for IC: We utilize `currval(pg_get_serial_sequence())` so this script 
--- is 100% dynamic. It will always target the newly created order regardless 
--- of how many orders currently exist in the seed data.
+-- is 100% dynamic and targets the newly created order automatically.
 -- ============================================================================
 
 -- ============================================================================
 -- STEP 1: ORDER CREATION (ACID Transaction)
--- Customer 4 (Sneha) orders 2x Veg Thali and 1x Cold Coffee from Canteen 1.
--- Delivery location: Academic Block 1 - Main Entrance (Destination 1).
--- Concept: We wrap the header and line-item inserts in a BEGIN/COMMIT block 
--- to ensure Atomicity—either the whole order succeeds, or none of it does.
+-- Customer 3 (Amit Verma) orders 2x Veg Thali and 1x Cold Coffee from Canteen 1.
+-- Delivery location: Hostel Gate (Destination 3).
 -- ============================================================================
 BEGIN;
 
 -- Insert Transaction Header (status: 'PENDING', driver: NULL)
 INSERT INTO "order" (customer_id, restaurant_id, driver_id, destination_id, status, delivery_fee, created_at, fulfilled_at)
-VALUES (4, 1, NULL, 1, 'PENDING', 0.00, CURRENT_TIMESTAMP, NULL);
+VALUES (3, 1, NULL, 3, 'PENDING', 0.00, CURRENT_TIMESTAMP, NULL);
 
 -- Insert Line Items with Historical Price Snapshots
 INSERT INTO order_item (order_id, item_id, restaurant_id, quantity, price_at_order)
@@ -31,32 +28,34 @@ VALUES
 
 COMMIT;
 
--- Verification: Display the newly inserted relational data and dynamic View total (Expected: 310.00)
-SELECT * FROM "order" WHERE order_id = currval(pg_get_serial_sequence('"order"', 'order_id'))::INT;
-SELECT * FROM order_item WHERE order_id = currval(pg_get_serial_sequence('"order"', 'order_id'))::INT;
-SELECT * FROM order_total WHERE order_id = currval(pg_get_serial_sequence('"order"', 'order_id'))::INT;
+-- 🟢 PROOF 1: Display the newly inserted relational data and dynamic View total (Expected: 310.00)
+SELECT order_id, customer_id, restaurant_id, status, created_at 
+FROM "order" WHERE order_id = currval(pg_get_serial_sequence('"order"', 'order_id'))::INT;
+
+SELECT order_id, item_id, quantity, price_at_order 
+FROM order_item WHERE order_id = currval(pg_get_serial_sequence('"order"', 'order_id'))::INT;
+
+SELECT order_id, total_amount AS dynamic_invoice_total 
+FROM order_total WHERE order_id = currval(pg_get_serial_sequence('"order"', 'order_id'))::INT;
 
 
 -- ============================================================================
 -- STEP 2: CANTEEN ACCEPTANCE
 -- The Canteen acknowledges the order and begins cooking.
--- Concept: Standard row update modifying the state machine.
 -- ============================================================================
 UPDATE "order" 
 SET status = 'PREPARING' 
 WHERE order_id = currval(pg_get_serial_sequence('"order"', 'order_id'))::INT 
   AND status = 'PENDING';
 
--- Verification:
-SELECT order_id, status FROM "order" WHERE order_id = currval(pg_get_serial_sequence('"order"', 'order_id'))::INT;
+-- 🟢 PROOF 2: Show the order status has successfully changed to PREPARING
+SELECT order_id, status AS current_order_status 
+FROM "order" WHERE order_id = currval(pg_get_serial_sequence('"order"', 'order_id'))::INT;
 
 
 -- ============================================================================
 -- STEP 3: SPATIAL DRIVER DISPATCH
--- The system automatically finds the closest 'AVAILABLE' driver to Canteen 1.
--- Concept: PostGIS K-Nearest Neighbor (KNN) Search.
--- Note for IC: The `<->` operator uses the GiST spatial index to calculate 
--- bounding-box distances exponentially faster than standard geometry math.
+-- The system automatically finds the closest 'AVAILABLE' driver to Canteen 1 via GiST KNN.
 -- ============================================================================
 WITH nearest_driver AS (
     SELECT d.driver_id 
@@ -71,21 +70,23 @@ UPDATE "order"
 SET driver_id = (SELECT driver_id FROM nearest_driver), status = 'IN_TRANSIT' 
 WHERE order_id = currval(pg_get_serial_sequence('"order"', 'order_id'))::INT;
 
--- Instantly update that driver's workforce status to prevent double-booking
+-- Instantly update that assigned driver's workforce status to prevent double-booking
 UPDATE driver 
 SET status = 'BUSY' 
 WHERE driver_id = (SELECT driver_id FROM "order" WHERE order_id = currval(pg_get_serial_sequence('"order"', 'order_id'))::INT);
 
--- Verification: Show driver workforce status change
-SELECT driver_id, name, status FROM driver ORDER BY driver_id;
+-- 🟢 PROOF 3: Show the order is now IN_TRANSIT with a driver, and the driver is BUSY
+SELECT order_id, driver_id AS assigned_driver, status AS current_order_status 
+FROM "order" WHERE order_id = currval(pg_get_serial_sequence('"order"', 'order_id'))::INT;
+
+SELECT driver_id, name, status AS workforce_status 
+FROM driver WHERE driver_id = (SELECT driver_id FROM "order" WHERE order_id = currval(pg_get_serial_sequence('"order"', 'order_id'))::INT);
 
 
 -- ============================================================================
 -- STEP 4: TELEMETRY & AUTOMATED PICKUP (GEOFENCING)
--- The assigned driver physically reaches Canteen 1.
--- Concept: Geofence proximity trigger (ST_DWithin).
+-- The assigned driver physically reaches Canteen 1, sending a GPS ping.
 -- ============================================================================
--- 1. Driver's mobile app sends a real-time GPS ping matching Canteen 1's exact location
 INSERT INTO location_trace (driver_id, location, recorded_at)
 VALUES (
     (SELECT driver_id FROM "order" WHERE order_id = currval(pg_get_serial_sequence('"order"', 'order_id'))::INT),
@@ -93,7 +94,10 @@ VALUES (
     CURRENT_TIMESTAMP
 );
 
--- 2. System verifies the driver is spatially within 30 meters of the Canteen
+-- 🟢 PROOF 4: Show the live telemetry ping, then prove they are within the 30m pickup geofence
+SELECT trace_id, driver_id, location, recorded_at 
+FROM location_trace ORDER BY trace_id DESC LIMIT 1;
+
 SELECT ST_DWithin(lt.location::geography, r.location::geography, 30.0) AS pickup_geofence_valid
 FROM location_trace lt, restaurant r 
 WHERE lt.driver_id = (SELECT driver_id FROM "order" WHERE order_id = currval(pg_get_serial_sequence('"order"', 'order_id'))::INT)
@@ -104,28 +108,29 @@ ORDER BY lt.recorded_at DESC LIMIT 1;
 -- ============================================================================
 -- STEP 5: DELIVERY COMPLETION & WORKFORCE RELEASE
 -- The driver successfully drops off the food at the destination.
--- Concept: State termination and workforce pool replenishment.
 -- ============================================================================
--- 1. Free the driver back into the dispatch pool
+-- Free the driver back into the dispatch pool
 UPDATE driver 
 SET status = 'AVAILABLE' 
 WHERE driver_id = (SELECT driver_id FROM "order" WHERE order_id = currval(pg_get_serial_sequence('"order"', 'order_id'))::INT);
 
--- 2. Close the order and lock in the fulfillment timestamp
+-- Close the order and lock in the fulfillment timestamp
 UPDATE "order" 
 SET status = 'DELIVERED', fulfilled_at = CURRENT_TIMESTAMP 
 WHERE order_id = currval(pg_get_serial_sequence('"order"', 'order_id'))::INT;
 
--- Verification: Show closed order and freed driver
-SELECT order_id, driver_id, status, fulfilled_at FROM "order" WHERE order_id = currval(pg_get_serial_sequence('"order"', 'order_id'))::INT;
-SELECT driver_id, name, status FROM driver ORDER BY driver_id;
+-- 🟢 PROOF 5: Show the order is finalized with a timestamp, and the driver is ready for a new task
+SELECT order_id, driver_id, status AS final_order_status, fulfilled_at 
+FROM "order" WHERE order_id = currval(pg_get_serial_sequence('"order"', 'order_id'))::INT;
+
+SELECT driver_id, name, status AS workforce_status 
+FROM driver WHERE driver_id = (SELECT driver_id FROM "order" WHERE order_id = currval(pg_get_serial_sequence('"order"', 'order_id'))::INT);
 
 
 -- ============================================================================
 -- FINAL SYSTEM AUDIT
--- Concept: Real-time consistency check.
--- Purpose: Expected Output: 0 Rows. This proves to the faculty that despite 
--- running a complex, multi-table spatiotemporal transaction, our strict schema 
--- constraints and state-machine logic prevented any logistical anomalies.
+-- Expected Output: 0 Rows. 
+-- Proves that no logical anomalies (like a missing driver or stranded order) 
+-- occurred during this complex lifecycle sequence.
 -- ============================================================================
 SELECT * FROM integrity_audit;
