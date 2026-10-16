@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campus Spatiotemporal Engine — DB Execution Inspector</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkbg: '#090d16',
+                        cardbg: '#111827',
+                        bordercolor: '#1f2937'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .table-container {
+            background-color: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+            width: fit-content;
+            max-width: 100%;
+        }
+        .table-header-title {
+            background-color: #1e293b;
+            padding: 6px 14px;
+            font-weight: 800;
+            font-size: 15.5px;
+            color: #f8fafc;
+            letter-spacing: 0.05em;
+            border-bottom: 1px solid #334155;
+            text-align: left;
+        }
+        .table-scroll-wrapper {
+            max-height: 280px;
+            overflow-y: auto;
+        }
+        /* Custom scrollbar for tables */
+        .table-scroll-wrapper::-webkit-scrollbar { width: 6px; height: 6px; }
+        .table-scroll-wrapper::-webkit-scrollbar-track { background: #0f172a; }
+        .table-scroll-wrapper::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        
+        th, td {
+            padding: 6px 12px;
+            text-align: left;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+        th {
+            background-color: #020617;
+            color: #94a3b8;
+            font-weight: 700;
+            border-bottom: 1px solid #1e293b;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        td {
+            border-bottom: 1px solid #0f172a;
+        }
+        
+        .pk-text { color: #facc15 !important; font-weight: 800; } 
+        .fk-header { color: #c084fc !important; font-weight: 800; } 
+        
+        .new-row-highlight {
+            background-color: rgba(16, 185, 129, 0.25) !important;
+            border: 1px solid #10b981 !important;
+            color: #34d399 !important;
+            font-weight: 800;
+        }
+        .cell-update-highlight {
+            background-color: rgba(16, 185, 129, 0.35) !important;
+            color: #6ee7b7 !important;
+            font-weight: 800;
+            border-radius: 4px;
+        }
+
+        .fk-line {
+            stroke: #334155;
+            stroke-width: 2.5;
+            fill: none;
+            transition: all 0.4s ease;
+        }
+        .fk-line-active {
+            stroke: #38bdf8;
+            stroke-width: 3.5;
+            stroke-dasharray: 6;
+            animation: dash 1s linear infinite;
+        }
+        @keyframes dash {
+            to { stroke-dashoffset: -12; }
+        }
+    </style>
+</head>
+<body class="bg-darkbg text-slate-100 font-sans min-h-screen flex flex-col">
+
+    <header class="bg-cardbg border-b border-bordercolor px-6 py-3 flex justify-between items-center shadow-lg sticky top-0 z-50">
+        <div class="flex items-center space-x-3">
+            <div class="p-2 bg-sky-500/20 text-sky-400 rounded-lg border border-sky-500/30">
+                <i class="fa-solid fa-database text-lg"></i>
+            </div>
+            <div>
+                <h1 class="text-base font-bold text-white tracking-wide">Campus Spatiotemporal Delivery Engine</h1>
+                <p class="text-xs text-slate-400">CS G516 Advanced Database Systems — Relational Execution Flow</p>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-3 bg-slate-950 p-1.5 rounded-xl border border-slate-800">
+            <button id="btn-prev" onclick="changeStep(-1)" class="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-xs font-semibold rounded-lg border border-slate-700 transition flex items-center space-x-1.5 text-slate-200">
+                <i class="fa-solid fa-backward"></i>
+                <span>Step Back (Undo)</span>
+            </button>
+            
+            <div class="px-5 text-center min-w-[320px]">
+                <span class="text-[10px] text-slate-400 block uppercase tracking-wider font-semibold">Active Transaction Stage</span>
+                <span id="step-indicator" class="text-sm font-bold text-sky-400 font-mono">Step 0 / 5 — Ready to Start</span>
+            </div>
+
+            <button id="btn-next" onclick="changeStep(1)" class="px-4 py-1.5 bg-sky-600 hover:bg-sky-500 text-xs font-semibold rounded-lg text-white shadow-md transition flex items-center space-x-1.5">
+                <span>Step Forward (Advance)</span>
+                <i class="fa-solid fa-forward"></i>
+            </button>
+
+            <button onclick="resetExecution()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-rose-950/60 text-slate-400 hover:text-rose-400 text-xs rounded-lg border border-slate-700 transition" title="Reset Simulation">
+                <i class="fa-solid fa-rotate-right"></i>
+            </button>
+        </div>
+
+        <div class="flex bg-slate-950 p-1 rounded-xl border border-slate-800 space-x-1">
+            <button id="tab-btn-er" onclick="switchTab('er')" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-sky-600 text-white transition flex items-center space-x-1">
+                <i class="fa-solid fa-sitemap mr-1"></i> Connected ER Diagram
+            </button>
+            <button id="tab-btn-sql" onclick="switchTab('sql')" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition flex items-center space-x-1">
+                <i class="fa-solid fa-terminal mr-1"></i> SQL Execution Pipeline
+            </button>
+        </div>
+    </header>
+
+    <main class="flex-1 p-6 relative flex flex-col">
+        <section id="tab-er" class="flex-1 flex flex-col space-y-4">
+            
+            <div class="bg-cardbg border border-bordercolor rounded-xl p-3 flex justify-between items-center text-xs">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-circle-info text-sky-400"></i>
+                    <span class="text-slate-300 text-xs">Execution Mechanics: <strong id="stage-summary" class="text-white font-mono text-xs">Pre-existing seeded data loaded. Click Step Forward to place new Order 14.</strong></span>
+                </div>
+                <div class="flex items-center space-x-4 text-xs font-mono">
+                    <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-yellow-400 mr-1.5"></span> PK (Yellow Text)</span>
+                    <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-purple-400 mr-1.5"></span> FK (Purple Header)</span>
+                    <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-1.5"></span> Green Highlight (Write/Update)</span>
+                </div>
+            </div>
+
+            <div class="relative flex-1 bg-slate-950 border border-slate-800 rounded-2xl p-6 min-h-[650px] overflow-x-auto flex flex-col justify-between">
+                
+                <svg id="svg-layer" class="absolute inset-0 w-full h-full pointer-events-none z-10"></svg>
+
+                <!-- ROW 1: MASTER ENTITIES -->
+                <div class="flex justify-between items-start z-20 px-4 gap-4">
+                    
+                    <div id="card-customer" class="table-container">
+                        <div class="table-header-title">CUSTOMER</div>
+                        <div class="table-scroll-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th class="pk-text">customer_id</th><th>name</th><th>phone</th><th>email</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td class="pk-text">1</td><td>Rahul Sharma</td><td>9123456701</td><td>rahul.s@campus.edu</td></tr>
+                                    <tr><td class="pk-text">2</td><td>Priya Patel</td><td>9123456702</td><td>priya.p@campus.edu</td></tr>
+                                    <tr><td class="pk-text">3</td><td>Amit Verma</td><td>9123456703</td><td>amit.v@campus.edu</td></tr>
+                                    <tr><td class="pk-text">4</td><td>Sneha Reddy</td><td>9123456704</td><td>sneha.r@campus.edu</td></tr>
+                                    <tr><td class="pk-text">5</td><td>Rohan Gupta</td><td>9123456705</td><td>rohan.g@campus.edu</td></tr>
+                                    <tr><td class="pk-text">6</td><td>Ananya Roy</td><td>9123456706</td><td>ananya.r@campus.edu</td></tr>
+                                    <tr><td class="pk-text">7</td><td>Karthik Nair</td><td>9123456707</td><td>karthik.n@campus.edu</td></tr>
+                                    <tr><td class="pk-text">8</td><td>Divya Joshi</td><td>9123456708</td><td>divya.j@campus.edu</td></tr>
+                                    <tr><td class="pk-text">9</td><td>Prof. K. Rao</td><td>9123456709</td><td>k.rao@campus.edu</td></tr>
+                                    <tr><td class="pk-text">10</td><td>Dr. M. Swamy</td><td>9123456710</td><td>m.swamy@campus.edu</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div id="card-restaurant" class="table-container">
+                        <div class="table-header-title">RESTAURANT</div>
+                        <div class="table-scroll-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th class="pk-text">restaurant_id</th><th>name</th><th>facility_type</th><th>target_demographic</th><th>student_rating</th><th>phone</th><th>location</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td class="pk-text">1</td><td>Canteen 1 (Main Hub)</td><td>Canteen</td><td>All</td><td>4.50</td><td>040-11112222</td><td>(17.5215, 78.5415)</td></tr>
+                                    <tr><td class="pk-text">2</td><td>Library Snack Bar</td><td>Canteen</td><td>All</td><td>4.20</td><td>040-11112223</td><td>(17.5235, 78.5435)</td></tr>
+                                    <tr><td class="pk-text">3</td><td>Hostel 3 Mess & Cafe</td><td>Canteen</td><td>All</td><td>3.90</td><td>040-11112224</td><td>(17.5225, 78.5475)</td></tr>
+                                    <tr><td class="pk-text">4</td><td>Sports Complex Juice Bar</td><td>Canteen</td><td>All</td><td>4.60</td><td>040-11112225</td><td>(17.5220, 78.5375)</td></tr>
+                                    <tr><td class="pk-text">5</td><td>Faculty Club Dining</td><td>Canteen</td><td>Faculty</td><td>4.80</td><td>040-11112226</td><td>(17.5275, 78.5425)</td></tr>
+                                    <tr><td class="pk-text">6</td><td>Mess 1 (1st & 2nd Year)</td><td>Mess</td><td>1st/2nd Year</td><td>2.10</td><td>040-22223331</td><td>(17.5215, 78.5465)</td></tr>
+                                    <tr><td class="pk-text">7</td><td>Mess 2 (3rd & 4th Year)</td><td>Mess</td><td>3rd/4th Year</td><td>3.80</td><td>040-22223332</td><td>(17.5285, 78.5475)</td></tr>
+                                    <tr><td class="pk-text">8</td><td>Mess 3 (Girls Hostel)</td><td>Mess</td><td>Girls</td><td>4.20</td><td>040-22223333</td><td>(17.5265, 78.5485)</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div id="card-menu_item" class="table-container">
+                        <div class="table-header-title">MENU_ITEM</div>
+                        <div class="table-scroll-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th class="pk-text">item_id</th><th class="fk-header">restaurant_id</th><th>name</th><th>category</th><th>price</th><th>serve_start</th><th>serve_end</th><th>prep_time</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td class="pk-text">1</td><td>1</td><td>Veg Thali</td><td>General</td><td>120.00</td><td>06:00:00</td><td>22:00:00</td><td>10</td></tr>
+                                    <tr><td class="pk-text">2</td><td>1</td><td>Cold Coffee</td><td>General</td><td>70.00</td><td>06:00:00</td><td>22:00:00</td><td>5</td></tr>
+                                    <tr><td class="pk-text">3</td><td>1</td><td>Veg Cheese Burger</td><td>General</td><td>90.00</td><td>06:00:00</td><td>22:00:00</td><td>8</td></tr>
+                                    <tr><td class="pk-text">4</td><td>1</td><td>Samosa Chat</td><td>General</td><td>60.00</td><td>06:00:00</td><td>22:00:00</td><td>5</td></tr>
+                                    <tr><td class="pk-text">5</td><td>1</td><td>Masala Dosa</td><td>General</td><td>80.00</td><td>06:00:00</td><td>11:00:00</td><td>12</td></tr>
+                                    <tr><td class="pk-text">6</td><td>2</td><td>Espresso Coffee</td><td>General</td><td>60.00</td><td>08:00:00</td><td>20:00:00</td><td>3</td></tr>
+                                    <tr><td class="pk-text">10</td><td>3</td><td>Chicken Biryani</td><td>General</td><td>180.00</td><td>12:00:00</td><td>22:00:00</td><td>15</td></tr>
+                                    <tr><td class="pk-text">15</td><td>4</td><td>Fresh Orange Juice</td><td>General</td><td>60.00</td><td>06:00:00</td><td>21:00:00</td><td>5</td></tr>
+                                    <tr><td class="pk-text">19</td><td>5</td><td>Special South Thali</td><td>General</td><td>150.00</td><td>12:00:00</td><td>15:00:00</td><td>10</td></tr>
+                                    <tr><td class="pk-text">24</td><td>1</td><td>Double Egg Roll</td><td>Snack</td><td>60.00</td><td>16:00:00</td><td>20:00:00</td><td>8</td></tr>
+                                    <tr><td class="pk-text">25</td><td>1</td><td>Chicken Tikka Roll</td><td>Snack</td><td>90.00</td><td>16:00:00</td><td>20:00:00</td><td>10</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- ROW 2: TRANSACTION CORE (ORDER & ORDER_ITEM) -->
+                <div class="flex justify-center items-start gap-12 z-20 my-6 px-4">
+                    
+                    <div id="card-order" class="table-container">
+                        <div class="table-header-title">ORDER</div>
+                        <div class="table-scroll-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th class="pk-text">order_id</th><th class="fk-header">customer_id</th><th class="fk-header">restaurant_id</th><th class="fk-header">driver_id</th><th class="fk-header">destination_id</th><th>status</th><th>delivery_fee</th><th>created_at</th><th>fulfilled_at</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-order">
+                                    <!-- Seed Data 1-13 + Dynamic Row 14 -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div id="card-order_item" class="table-container">
+                        <div class="table-header-title">ORDER_ITEM</div>
+                        <div class="table-scroll-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th class="fk-header">order_id</th><th class="fk-header">item_id</th><th class="fk-header">restaurant_id</th><th>quantity</th><th>price_at_order</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-order-item">
+                                    <!-- Seed Data + Dynamic Row -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- ROW 3: WORKFORCE & SPATIAL ENTITIES -->
+                <div class="flex justify-between items-start gap-6 z-20 px-2">
+                    
+                    <div id="card-driver" class="table-container">
+                        <div class="table-header-title">DRIVER</div>
+                        <div class="table-scroll-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th class="pk-text">driver_id</th><th>name</th><th>phone</th><th>status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-driver">
+                                    <tr id="row-driver-1"><td class="pk-text">1</td><td>Driver A (Ramesh)</td><td>9876543210</td><td>BUSY</td></tr>
+                                    <tr id="row-driver-2"><td class="pk-text">2</td><td>Driver B (Suresh)</td><td>9876543211</td><td id="cell-driver-2-status">AVAILABLE</td></tr>
+                                    <tr id="row-driver-3"><td class="pk-text">3</td><td>Driver C (Anita)</td><td>9876543212</td><td>AVAILABLE</td></tr>
+                                    <tr id="row-driver-4"><td class="pk-text">4</td><td>Driver D (Vikram)</td><td>9876543213</td><td>BUSY</td></tr>
+                                    <tr id="row-driver-5"><td class="pk-text">5</td><td>Driver E (Pooja)</td><td>9876543214</td><td>AVAILABLE</td></tr>
+                                    <tr id="row-driver-6"><td class="pk-text">6</td><td>Driver F (Karan)</td><td>9876543215</td><td>OFFLINE</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div id="card-location_trace" class="table-container">
+                        <div class="table-header-title">LOCATION_TRACE</div>
+                        <div class="table-scroll-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th class="pk-text">trace_id</th><th class="fk-header">driver_id</th><th>location</th><th>recorded_at</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-location-trace">
+                                    <tr><td class="pk-text">999</td><td>1</td><td>(17.5212, 78.5412)</td><td>14:23:00</td></tr>
+                                    <tr><td class="pk-text">1000</td><td>2</td><td>(17.5231, 78.5431)</td><td>14:24:00</td></tr>
+                                    <!-- Dynamic telemetry ping appended here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div id="card-delivery_location" class="table-container">
+                        <div class="table-header-title">DELIVERY_LOCATION</div>
+                        <div class="table-scroll-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th class="pk-text">location_id</th><th class="fk-header">zone_id</th><th>name</th><th>point</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td class="pk-text">1</td><td>1</td><td>Academic Block 1</td><td>(17.5210, 78.5410)</td></tr>
+                                    <tr><td class="pk-text">2</td><td>1</td><td>Central Library</td><td>(17.5230, 78.5430)</td></tr>
+                                    <tr><td class="pk-text">3</td><td>2</td><td>Hostel 1 Mess Gate</td><td>(17.5210, 78.5460)</td></tr>
+                                    <tr><td class="pk-text">4</td><td>2</td><td>Hostel 3 Common Room</td><td>(17.5230, 78.5480)</td></tr>
+                                    <tr><td class="pk-text">5</td><td>3</td><td>Hostel 5 Girls Wing</td><td>(17.5270, 78.5470)</td></tr>
+                                    <tr><td class="pk-text">6</td><td>3</td><td>Hostel Gate</td><td>(17.5280, 78.5490)</td></tr>
+                                    <tr><td class="pk-text">7</td><td>4</td><td>Indoor Badminton Court</td><td>(17.5210, 78.5380)</td></tr>
+                                    <tr><td class="pk-text">8</td><td>4</td><td>Main Football Ground</td><td>(17.5240, 78.5360)</td></tr>
+                                    <tr><td class="pk-text">9</td><td>5</td><td>Faculty Quarters Block B</td><td>(17.5280, 78.5410)</td></tr>
+                                    <tr><td class="pk-text">10</td><td>1</td><td>Directorate Admin Building</td><td>(17.5260, 78.5440)</td></tr>
+                                    <tr><td class="pk-text">11</td><td>6</td><td>Staff Quarters Block C</td><td>(17.5275, 78.5325)</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div id="card-campus_zone" class="table-container">
+                        <div class="table-header-title">CAMPUS_ZONE</div>
+                        <div class="table-scroll-wrapper">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th class="pk-text">zone_id</th><th>zone_name</th><th>boundary</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td class="pk-text">1</td><td>Academic Zone</td><td>POLYGON(...)</td></tr>
+                                    <tr><td class="pk-text">2</td><td>Hostel Zone A</td><td>POLYGON(...)</td></tr>
+                                    <tr><td class="pk-text">3</td><td>Hostel Zone B</td><td>POLYGON(...)</td></tr>
+                                    <tr><td class="pk-text">4</td><td>Sports Complex Zone</td><td>POLYGON(...)</td></tr>
+                                    <tr><td class="pk-text">5</td><td>Faculty Residential Zone</td><td>POLYGON(...)</td></tr>
+                                    <tr><td class="pk-text">6</td><td>Staff Quarters Zone</td><td>POLYGON(...)</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </section>
+
+        <!-- TAB 2: EXECUTION SQL -->
+        <section id="tab-sql" class="hidden flex-1 grid grid-cols-12 gap-6">
+            <div class="col-span-12 bg-cardbg border border-bordercolor rounded-2xl p-5 shadow-xl flex flex-col">
+                <h2 class="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-terminal text-emerald-400"></i> Executed Query Pipeline & PostGIS Operations
+                </h2>
+                <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 font-mono text-sm overflow-x-auto flex-1">
+                    <pre id="sql-display" class="text-sky-300 whitespace-pre-wrap">-- Baseline initialized.</pre>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        let currentStep = 0;
+
+        const connections = [
+            { from: 'customer', to: 'order', id: 'conn-cust-order', card: '1:N' },
+            { from: 'restaurant', to: 'order', id: 'conn-rest-order', card: '1:N' },
+            { from: 'restaurant', to: 'menu_item', id: 'conn-rest-menu', card: '1:N' },
+            { from: 'order', to: 'order_item', id: 'conn-order-item', card: '1:N' },
+            { from: 'menu_item', to: 'order_item', id: 'conn-menu-orderitem', card: '1:N' },
+            { from: 'driver', to: 'order', id: 'conn-driver-order', card: '1:N' },
+            { from: 'driver', to: 'location_trace', id: 'conn-driver-trace', card: '1:N' },
+            { from: 'campus_zone', to: 'delivery_location', id: 'conn-zone-loc', card: '1:N' },
+            { from: 'delivery_location', to: 'order', id: 'conn-loc-order', card: '1:N' }
+        ];
+
+        const steps = [
+            {
+                step: 0,
+                title: "Step 0 / 5 — Ready to Start",
+                stageSummary: "Pre-existing seeded data loaded. Click Step Forward to place new Order 14.",
+                activeConnectors: [],
+                sql: "-- Baseline state loaded. Pre-existing orders 1 through 13 present in database from 02_seed.sql."
+            },
+            {
+                step: 1,
+                title: "Step 1 / 5 — Order Creation & Table Update",
+                stageSummary: "New order placed by Amit Verma (Customer 3). New rows added to ORDER and ORDER_ITEM tables.",
+                activeConnectors: ["conn-cust-order", "conn-rest-order", "conn-order-item", "conn-menu-orderitem"],
+                sql: `BEGIN TRANSACTION;\n\n-- Insert Transaction Header (Customer 3, Restaurant 1, Destination 3, NULL Driver)\nINSERT INTO "order" (order_id, customer_id, restaurant_id, driver_id, destination_id, status, delivery_fee, created_at, fulfilled_at)\nVALUES (14, 3, 1, NULL, 3, 'PENDING', 0.00, NOW(), NULL);\n\n-- Insert Line Item with Historical Price Snapshot and Composite Integrity\nINSERT INTO order_item (order_id, item_id, restaurant_id, quantity, price_at_order)\nVALUES (14, 1, 1, 2, 120.00);\n\nCOMMIT;`
+            },
+            {
+                step: 2,
+                title: "Step 2 / 5 — Canteen Acceptance & Preparation",
+                stageSummary: "Canteen 1 accepts order. ORDER status updated to PREPARING.",
+                activeConnectors: ["conn-rest-order"],
+                sql: `UPDATE "order" \nSET status = 'PREPARING'\nWHERE order_id = 14 AND status = 'PENDING';`
+            },
+            {
+                step: 3,
+                title: "Step 3 / 5 — Searching for Driver & Assigning Order",
+                stageSummary: "Nearest available Driver B (Suresh) assigned via PostGIS KNN (<->). ORDER updated with driver_id = 2.",
+                activeConnectors: ["conn-driver-order", "conn-driver-trace"],
+                sql: `-- PostGIS KNN Nearest Neighbor Bounding Box Operator (<->)\nSELECT d.driver_id FROM driver d JOIN location_trace lt ON d.driver_id = lt.driver_id\nJOIN restaurant r ON r.restaurant_id = 1 WHERE d.status = 'AVAILABLE'\nORDER BY lt.location <-> r.location LIMIT 1;\n\nUPDATE "order" SET driver_id = 2, status = 'IN_TRANSIT' WHERE order_id = 14;\nUPDATE driver SET status = 'BUSY' WHERE driver_id = 2;`
+            },
+            {
+                step: 4,
+                title: "Step 4 / 5 — Driver Telemetry & Pickup Geofence Check",
+                stageSummary: "Driver reaches Canteen 1 within 30m (ST_DWithin). Real-time GPS ping logged to LOCATION_TRACE.",
+                activeConnectors: ["conn-rest-order", "conn-driver-trace"],
+                sql: `SELECT ST_DWithin(lt.location::geography, r.location::geography, 30.0)\nFROM location_trace lt, restaurant r WHERE lt.driver_id = 2 AND r.restaurant_id = 1;\n\nINSERT INTO location_trace (trace_id, driver_id, location, recorded_at)\nVALUES (1001, 2, ST_SetSRID(ST_MakePoint(78.5415, 17.5215), 4326), NOW());`
+            },
+            {
+                step: 5,
+                title: "Step 5 / 5 — Order Delivered Successfully",
+                stageSummary: "Order delivered inside Hostel Zone A (ST_Covers). ORDER status updated to DELIVERED.",
+                activeConnectors: ["conn-zone-loc", "conn-loc-order", "conn-driver-order"],
+                sql: `SELECT ST_Covers(cz.boundary, dl.point)\nFROM campus_zone cz JOIN delivery_location dl ON cz.zone_id = dl.zone_id\nWHERE dl.location_id = 3;\n\nUPDATE "order" SET status = 'DELIVERED', fulfilled_at = NOW() WHERE order_id = 14;\nUPDATE driver SET status = 'AVAILABLE' WHERE driver_id = 2;`
+            }
+        ];
+
+        function renderTableState() {
+            const data = steps[currentStep];
+
+            document.getElementById('step-indicator').innerText = data.title;
+            document.getElementById('stage-summary').innerText = data.stageSummary;
+            document.getElementById('sql-display').innerText = data.sql;
+
+            document.getElementById('btn-prev').disabled = currentStep === 0;
+            document.getElementById('btn-next').disabled = currentStep === steps.length - 1;
+
+            // --- RENDER ORDER TABLE (Base 13 rows from seed) ---
+            const tbodyOrder = document.getElementById('tbody-order');
+            let orderHtml = `
+                <tr><td class="pk-text">1</td><td>1</td><td>1</td><td>1</td><td>3</td><td>PREPARING</td><td>0.00</td><td>-20 mins</td><td>NULL</td></tr>
+                <tr><td class="pk-text">2</td><td>2</td><td>2</td><td>2</td><td>2</td><td>DELIVERED</td><td>0.00</td><td>-110 mins</td><td>-85 mins</td></tr>
+                <tr><td class="pk-text">3</td><td>3</td><td>3</td><td>4</td><td>4</td><td>IN_TRANSIT</td><td>0.00</td><td>-35 mins</td><td>NULL</td></tr>
+                <tr><td class="pk-text">4</td><td>4</td><td>1</td><td>3</td><td>1</td><td>DELIVERED</td><td>0.00</td><td>-180 mins</td><td>-150 mins</td></tr>
+                <tr><td class="pk-text">5</td><td>5</td><td>4</td><td>5</td><td>8</td><td>DELIVERED</td><td>0.00</td><td>-60 mins</td><td>-40 mins</td></tr>
+                <tr><td class="pk-text">6</td><td>6</td><td>3</td><td>1</td><td>5</td><td>PREPARING</td><td>0.00</td><td>-15 mins</td><td>NULL</td></tr>
+                <tr><td class="pk-text">7</td><td>7</td><td>2</td><td>2</td><td>6</td><td>DELIVERED</td><td>0.00</td><td>-240 mins</td><td>-210 mins</td></tr>
+                <tr><td class="pk-text">8</td><td>8</td><td>4</td><td>3</td><td>7</td><td>DELIVERED</td><td>0.00</td><td>-90 mins</td><td>-70 mins</td></tr>
+                <tr><td class="pk-text">9</td><td>9</td><td>5</td><td>5</td><td>9</td><td>IN_TRANSIT</td><td>0.00</td><td>-25 mins</td><td>NULL</td></tr>
+                <tr><td class="pk-text">10</td><td>10</td><td>1</td><td>NULL</td><td>3</td><td>PENDING</td><td>0.00</td><td>-5 mins</td><td>NULL</td></tr>
+                <tr><td class="pk-text">11</td><td>4</td><td>1</td><td>3</td><td>1</td><td>CANCELLED</td><td>0.00</td><td>-45 mins</td><td>NULL</td></tr>
+                <tr><td class="pk-text">12</td><td>9</td><td>4</td><td>2</td><td>11</td><td>PREPARING</td><td>25.00</td><td>-8 mins</td><td>NULL</td></tr>
+                <tr><td class="pk-text">13</td><td>1</td><td>1</td><td>3</td><td>11</td><td>DELIVERED</td><td>45.50</td><td>-300 mins</td><td>-260 mins</td></tr>
+            `;
+
+            if (currentStep >= 1) {
+                let driverIdVal = currentStep >= 3 ? "2" : "NULL";
+                let statusVal = "PENDING";
+                let fulfilledVal = "NULL";
+
+                if (currentStep === 2) statusVal = "PREPARING";
+                if (currentStep === 3) statusVal = "IN_TRANSIT";
+                if (currentStep === 4) statusVal = "IN_TRANSIT";
+                if (currentStep === 5) {
+                    statusVal = "DELIVERED";
+                    fulfilledVal = "JUST NOW";
+                }
+
+                let highlightClass = currentStep === 1 ? "new-row-highlight" : "";
+                let driverHighlight = currentStep === 3 ? "cell-update-highlight" : "";
+                let statusHighlight = currentStep >= 2 ? "cell-update-highlight" : "";
+                let fulfilledHighlight = currentStep === 5 ? "cell-update-highlight" : "";
+
+                orderHtml += `
+                    <tr class="${highlightClass}">
+                        <td class="pk-text">14</td>
+                        <td>3</td>
+                        <td>1</td>
+                        <td class="${driverHighlight}">${driverIdVal}</td>
+                        <td>3</td>
+                        <td class="${statusHighlight}">${statusVal}</td>
+                        <td>0.00</td>
+                        <td>JUST NOW</td>
+                        <td class="${fulfilledHighlight}">${fulfilledVal}</td>
+                    </tr>
+                `;
+            }
+            tbodyOrder.innerHTML = orderHtml;
+
+            // --- RENDER ORDER_ITEM TABLE (Base rows from seed) ---
+            const tbodyOrderItem = document.getElementById('tbody-order-item');
+            let itemHtml = `
+                <tr><td>1</td><td>1</td><td>1</td><td>2</td><td>120.00</td></tr>
+                <tr><td>1</td><td>2</td><td>1</td><td>1</td><td>70.00</td></tr>
+                <tr><td>2</td><td>6</td><td>2</td><td>1</td><td>60.00</td></tr>
+                <tr><td>2</td><td>7</td><td>2</td><td>1</td><td>110.00</td></tr>
+                <tr><td>3</td><td>10</td><td>3</td><td>2</td><td>180.00</td></tr>
+                <tr><td>4</td><td>3</td><td>1</td><td>2</td><td>90.00</td></tr>
+                <tr><td>5</td><td>15</td><td>4</td><td>2</td><td>60.00</td></tr>
+                <tr><td>6</td><td>11</td><td>3</td><td>1</td><td>190.00</td></tr>
+                <tr><td>7</td><td>7</td><td>2</td><td>2</td><td>110.00</td></tr>
+                <tr><td>8</td><td>16</td><td>4</td><td>2</td><td>110.00</td></tr>
+                <tr><td>9</td><td>19</td><td>5</td><td>1</td><td>150.00</td></tr>
+                <tr><td>10</td><td>1</td><td>1</td><td>1</td><td>120.00</td></tr>
+                <tr><td>11</td><td>3</td><td>1</td><td>1</td><td>90.00</td></tr>
+                <tr><td>12</td><td>16</td><td>4</td><td>2</td><td>110.00</td></tr>
+                <tr><td>13</td><td>25</td><td>1</td><td>1</td><td>135.00</td></tr>
+            `;
+            if (currentStep >= 1) {
+                let highlightClass = currentStep === 1 ? "new-row-highlight" : "";
+                itemHtml += `
+                    <tr class="${highlightClass}">
+                        <td>14</td>
+                        <td>1</td>
+                        <td>1</td>
+                        <td>2</td>
+                        <td>120.00</td>
+                    </tr>
+                `;
+            }
+            tbodyOrderItem.innerHTML = itemHtml;
+
+            // --- RENDER DRIVER TABLE ---
+            const cellDriverStatus = document.getElementById('cell-driver-2-status');
+            if (currentStep >= 3 && currentStep < 5) {
+                cellDriverStatus.innerText = "BUSY";
+                cellDriverStatus.className = "cell-update-highlight";
+            } else {
+                cellDriverStatus.innerText = "AVAILABLE";
+                cellDriverStatus.className = "";
+            }
+
+            // --- RENDER LOCATION_TRACE TABLE ---
+            const tbodyTrace = document.getElementById('tbody-location-trace');
+            let traceHtml = `
+                <tr><td class="pk-text">999</td><td>1</td><td>(17.5212, 78.5412)</td><td>14:23:00</td></tr>
+                <tr><td class="pk-text">1000</td><td>2</td><td>(17.5231, 78.5431)</td><td>14:24:00</td></tr>
+            `;
+            if (currentStep >= 4) {
+                let highlightClass = currentStep === 4 ? "new-row-highlight" : "";
+                traceHtml += `
+                    <tr class="${highlightClass}">
+                        <td class="pk-text">1001</td>
+                        <td>2</td>
+                        <td>(17.5215, 78.5415)</td>
+                        <td>14:26:15</td>
+                    </tr>
+                `;
+            }
+            tbodyTrace.innerHTML = traceHtml;
+
+            drawConnectors();
+        }
+
+        function drawConnectors() {
+            const svg = document.getElementById('svg-layer');
+            if (!svg) return;
+            const svgRect = svg.getBoundingClientRect();
+
+            svg.innerHTML = '';
+
+            const data = steps[currentStep];
+
+            connections.forEach(c => {
+                const elFrom = document.getElementById(`card-${c.from}`);
+                const elTo = document.getElementById(`card-${c.to}`);
+                if (!elFrom || !elTo) return;
+
+                const rFrom = elFrom.getBoundingClientRect();
+                const rTo = elTo.getBoundingClientRect();
+
+                const x1 = (rFrom.left + rFrom.width / 2) - svgRect.left;
+                const y1 = (rFrom.top + rFrom.height / 2) - svgRect.top;
+                const x2 = (rTo.left + rTo.width / 2) - svgRect.left;
+                const y2 = (rTo.top + rTo.height / 2) - svgRect.top;
+
+                const isActive = data.activeConnectors.includes(c.id);
+
+                // Connector line
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                const dy = (y2 - y1) / 2;
+                path.setAttribute('d', `M ${x1} ${y1} C ${x1} ${y1 + dy}, ${x2} ${y2 - dy}, ${x2} ${y2}`);
+                path.setAttribute('class', isActive ? 'fk-line fk-line-active' : 'fk-line');
+                path.setAttribute('id', c.id);
+                svg.appendChild(path);
+
+                // White 1:N constraint label badge on bridge
+                const midX = (x1 + x2) / 2;
+                const midY = (y1 + y2) / 2;
+
+                const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', midX - 18);
+                rect.setAttribute('y', midY - 11);
+                rect.setAttribute('width', 36);
+                rect.setAttribute('height', 22);
+                rect.setAttribute('rx', 5);
+                rect.setAttribute('fill', isActive ? '#020617' : '#0f172a');
+                rect.setAttribute('stroke', isActive ? '#38bdf8' : '#334155');
+                rect.setAttribute('stroke-width', '1.5');
+
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', midX);
+                text.setAttribute('y', midY + 4);
+                text.setAttribute('fill', '#ffffff');
+                text.setAttribute('font-size', '12px');
+                text.setAttribute('font-weight', 'bold');
+                text.setAttribute('font-family', 'monospace');
+                text.setAttribute('text-anchor', 'middle');
+                text.textContent = c.card;
+
+                g.appendChild(rect);
+                g.appendChild(text);
+                svg.appendChild(g);
+            });
+        }
+
+        function changeStep(delta) {
+            currentStep = Math.max(0, Math.min(steps.length - 1, currentStep + delta));
+            renderTableState();
+        }
+
+        function resetExecution() {
+            currentStep = 0;
+            renderTableState();
+        }
+
+        function switchTab(tab) {
+            ['er', 'sql'].forEach(t => {
+                document.getElementById(`tab-${t}`).classList.add('hidden');
+                document.getElementById(`tab-btn-${t}`).className = 'px-3.5 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition flex items-center space-x-1';
+            });
+
+            document.getElementById(`tab-${tab}`).classList.remove('hidden');
+            document.getElementById(`tab-btn-${tab}`).className = 'px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-sky-600 text-white transition flex items-center space-x-1';
+
+            if (tab === 'er') setTimeout(drawConnectors, 50);
+        }
+
+        window.onload = function() {
+            renderTableState();
+            window.addEventListener('resize', drawConnectors);
+        };
+    </script>
+</body>
+</html>

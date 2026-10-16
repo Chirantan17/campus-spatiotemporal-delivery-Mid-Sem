@@ -69,7 +69,7 @@ CREATE TABLE menu_item (
     UNIQUE (item_id, restaurant_id) 
 );
 
--- 7. Orders (Delete Anomalies Prevented via RESTRICT)
+-- 7. Orders
 CREATE TABLE "order" (
     order_id SERIAL PRIMARY KEY,
     customer_id INT REFERENCES customer(customer_id) ON DELETE RESTRICT,

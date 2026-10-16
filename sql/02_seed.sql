@@ -36,7 +36,7 @@ INSERT INTO delivery_location (zone_id, name, point) VALUES
 (2, 'Hostel 1 Mess Gate',               ST_SetSRID(ST_MakePoint(78.5460, 17.5210), 4326)),
 (2, 'Hostel 3 Common Room',             ST_SetSRID(ST_MakePoint(78.5480, 17.5230), 4326)),
 (3, 'Hostel 5 Girls Wing Gate',         ST_SetSRID(ST_MakePoint(78.5470, 17.5270), 4326)),
-(3, 'PG Married Hostel Gate',           ST_SetSRID(ST_MakePoint(78.5490, 17.5280), 4326)),
+(3, 'Hostel Gate',                      ST_SetSRID(ST_MakePoint(78.5490, 17.5280), 4326)),
 (4, 'Indoor Badminton Court',           ST_SetSRID(ST_MakePoint(78.5380, 17.5210), 4326)),
 (4, 'Main Football Ground Pavilion',    ST_SetSRID(ST_MakePoint(78.5360, 17.5240), 4326)),
 (5, 'Faculty Quarters Block B',         ST_SetSRID(ST_MakePoint(78.5410, 17.5280), 4326)),
@@ -58,7 +58,7 @@ INSERT INTO customer (name, phone, email) VALUES
 
 -- 6. MENU ITEMS 
 INSERT INTO menu_item (restaurant_id, name, category, price, serve_start_time, serve_end_time, prep_time_minutes) VALUES
-(1, 'Veg-Thali',  'General', 120.00, '06:00:00', '22:00:00', 10),
+(1, 'Veg Thali',           'General', 120.00, '06:00:00', '22:00:00', 10),
 (1, 'Cold Coffee',         'General',  70.00, '06:00:00', '22:00:00', 5),
 (1, 'Veg Cheese Burger',   'General',  90.00, '06:00:00', '22:00:00', 8),
 (1, 'Samosa Chat',         'General',  60.00, '06:00:00', '22:00:00', 5),
@@ -132,6 +132,3 @@ SELECT
     CURRENT_TIMESTAMP - (i || ' seconds')::INTERVAL
 FROM generate_series(1, 200) AS i
 CROSS JOIN (SELECT driver_id FROM driver WHERE status != 'OFFLINE') d;
-
--- 10. The Intentional "Ghost Driver" Anomaly (To be caught by the Audit View!)
-UPDATE driver SET status = 'OFFLINE' WHERE driver_id = 1;

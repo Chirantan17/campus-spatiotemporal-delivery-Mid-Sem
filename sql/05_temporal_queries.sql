@@ -58,5 +58,3 @@ SELECT mi.name AS item_name,
 FROM menu_item mi
 JOIN restaurant r ON mi.restaurant_id = r.restaurant_id
 ORDER BY pricing_status DESC, mi.name ASC;
-
---later on we introduce dynamic-fares if long distance 

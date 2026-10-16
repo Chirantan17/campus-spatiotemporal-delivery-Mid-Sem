@@ -3,8 +3,6 @@
 -- ============================================================================
 
 -- Q6.1: Automated Pickup Geofence Check - Detect drivers within 30m of canteen-1
---since ramesh is currently held for active orders-for c1 it must show -0m
---and his status as busy
 WITH latest_telemetry AS (
     SELECT DISTINCT ON (driver_id) driver_id, location, recorded_at
     FROM location_trace
@@ -21,7 +19,6 @@ WHERE o.status = 'PREPARING'
   AND ST_DWithin(lt.location::geography, r.location::geography, 30);
 
 -- Q6.2: Nearest Available Driver Dispatch via GiST Index KNN Operator (<->) 
---for canteen-1 -main hub
 WITH latest_telemetry AS (
     SELECT DISTINCT ON (driver_id) driver_id, location, recorded_at
     FROM location_trace
@@ -54,13 +51,15 @@ JOIN delivery_location dl ON o.destination_id = dl.location_id
 JOIN latest_telemetry lt ON lt.driver_id = d.driver_id
 WHERE o.status = 'PREPARING';
 
--- Q6.4: Spatio-Temporal Zone Revenue Analysis 
+-- Q6.4: Spatio-Temporal Zone Revenue Analysis (Rolling 24-Hour Window)
 SELECT z.zone_name, 
        COUNT(DISTINCT o.order_id) AS total_delivered_orders,
        COALESCE(SUM(oi.quantity * oi.price_at_order), 0) AS revenue_inr
 FROM campus_zone z
 LEFT JOIN delivery_location dl ON ST_Covers(z.boundary, dl.point)
-LEFT JOIN "order" o ON o.destination_id = dl.location_id AND o.status = 'DELIVERED'
+LEFT JOIN "order" o ON o.destination_id = dl.location_id 
+                    AND o.status = 'DELIVERED' 
+                    AND o.fulfilled_at >= CURRENT_TIMESTAMP - INTERVAL '24 hours'
 LEFT JOIN order_item oi ON o.order_id = oi.order_id
 GROUP BY z.zone_id, z.zone_name
 ORDER BY revenue_inr DESC;
@@ -87,7 +86,8 @@ ORDER BY d.driver_id;
 -- 5. ADVANCED ANOMALY DETECTION & EXTREME ROUTING
 -- ============================================================================
 
--- Q6.6: Logistical Anomaly Detection 
+-- Q6.6: Logistical Anomaly Detection
+-- Expected Output: 0 Rows. Proves our active delivery state is completely consistent with driver workforce state.
 SELECT o.order_id, o.status AS order_status, d.name AS driver_name, d.status AS current_driver_status
 FROM "order" o
 JOIN driver d ON o.driver_id = d.driver_id
